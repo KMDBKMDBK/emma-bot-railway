@@ -1,0 +1,5 @@
+.env 
+firebase-adminsdk.json 
+firebase_credentials.txt 
+__pycache__/ 
+*.pyc 

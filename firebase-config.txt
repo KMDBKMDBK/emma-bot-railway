@@ -1,0 +1,17 @@
+// Import the functions you need from the SDKs you need
+import { initializeApp } from "firebase/app";
+// TODO: Add SDKs for Firebase products that you want to use
+// https://firebase.google.com/docs/web/setup#available-libraries
+
+// Your web app's Firebase configuration
+const firebaseConfig = {
+  apiKey: "AIzaSyALSnrAmwh_n7AUVBHb6dXn2IxTr6KIdOA",
+  authDomain: "emmabotminiapp.firebaseapp.com",
+  projectId: "emmabotminiapp",
+  storageBucket: "emmabotminiapp.firebasestorage.app",
+  messagingSenderId: "137631803878",
+  appId: "1:137631803878:web:c3a26ca067b23bdd7c4e27"
+};
+
+// Initialize Firebase
+const app = initializeApp(firebaseConfig);

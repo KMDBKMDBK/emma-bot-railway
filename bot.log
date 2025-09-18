@@ -1,0 +1,190 @@
+2025-09-13 01:44:12,388 - INFO - Start polling
+2025-09-13 01:45:16,892 - INFO - Update id=200546421 is handled. Duration 835 ms by bot id=8360260573
+2025-09-13 01:45:28,501 - INFO - Пользователь 7665269659: Получен текст: Привет, как зовут солиста группы три дня дождя?
+2025-09-13 01:45:30,423 - ERROR - Google CSE HTTP ошибка: 429
+2025-09-13 01:45:30,427 - INFO - История для пользователя 7665269659: [{'role': 'user', 'content': 'Привет, как зовут солиста группы три дня дождя?'}]
+2025-09-13 01:45:34,151 - INFO - HTTP Request: POST https://openrouter.ai/api/v1/chat/completions "HTTP/1.1 200 OK"
+2025-09-13 01:45:42,878 - WARNING - URL мини-аппки слишком длинный, кнопка не добавлена.
+2025-09-13 01:45:43,138 - INFO - Активная тема для пользователя 7665269659: музыка
+2025-09-13 01:45:43,139 - INFO - Update id=200546422 is handled. Duration 14639 ms by bot id=8360260573
+2025-09-13 02:17:29,951 - INFO - Polling stopped
+2025-09-13 02:17:29,955 - ERROR - Failed to fetch updates - TelegramNetworkError: HTTP Client says - ServerDisconnectedError: Server disconnected
+2025-09-13 02:17:29,956 - WARNING - Sleep for 1.000000 seconds and try again... (tryings = 0, bot id = 8360260573)
+2025-09-13 03:15:31,389 - INFO - Start polling
+2025-09-13 03:15:41,166 - INFO - Пользователь 7665269659: Получен текст: Привет, сколько сейчас времени
+2025-09-13 03:15:43,363 - ERROR - Google CSE HTTP ошибка: 429
+2025-09-13 03:15:43,366 - INFO - История для пользователя 7665269659: [{'role': 'user', 'content': 'Привет, сколько сейчас времени'}]
+2025-09-13 03:15:46,916 - INFO - HTTP Request: POST https://openrouter.ai/api/v1/chat/completions "HTTP/1.1 200 OK"
+2025-09-13 03:15:51,430 - WARNING - URL мини-аппки слишком длинный, кнопка не добавлена.
+2025-09-13 03:15:51,774 - INFO - Активная тема для пользователя 7665269659: привет!
+2025-09-13 03:15:51,775 - INFO - Update id=200546423 is handled. Duration 10609 ms by bot id=8360260573
+2025-09-13 03:16:53,398 - INFO - Пользователь 7665269659: Получен текст: Что ты можешь рассказать про город Горно-Алтайск
+2025-09-13 03:16:54,972 - ERROR - Google CSE HTTP ошибка: 429
+2025-09-13 03:16:56,395 - INFO - HTTP Request: POST https://openrouter.ai/api/v1/chat/completions "HTTP/1.1 200 OK"
+2025-09-13 03:17:20,757 - WARNING - URL мини-аппки слишком длинный, кнопка не добавлена.
+2025-09-13 03:17:21,013 - INFO - Активная тема для пользователя 7665269659: <b>горно-алтайск</b>
+2025-09-13 03:17:21,014 - INFO - Update id=200546424 is handled. Duration 27617 ms by bot id=8360260573
+2025-09-13 03:17:54,708 - INFO - Пользователь 7665269659: Получен текст: Как зовут солиста группы любэ?
+2025-09-13 03:17:56,303 - ERROR - Google CSE HTTP ошибка: 429
+2025-09-13 03:17:57,807 - INFO - HTTP Request: POST https://openrouter.ai/api/v1/chat/completions "HTTP/1.1 200 OK"
+2025-09-13 03:18:06,574 - WARNING - URL мини-аппки слишком длинный, кнопка не добавлена.
+2025-09-13 03:18:06,879 - INFO - Активная тема для пользователя 7665269659: музыка
+2025-09-13 03:18:06,879 - INFO - Update id=200546425 is handled. Duration 12171 ms by bot id=8360260573
+2025-09-13 03:18:25,963 - INFO - Пользователь 7665269659: Получен текст: Как зовут солиста группы три дня дождя на самом деле?
+2025-09-13 03:18:27,516 - ERROR - Google CSE HTTP ошибка: 429
+2025-09-13 03:18:29,049 - INFO - HTTP Request: POST https://openrouter.ai/api/v1/chat/completions "HTTP/1.1 200 OK"
+2025-09-13 03:18:39,542 - WARNING - URL мини-аппки слишком длинный, кнопка не добавлена.
+2025-09-13 03:18:39,841 - INFO - Активная тема для пользователя 7665269659: музыка
+2025-09-13 03:18:39,850 - INFO - Update id=200546426 is handled. Duration 13887 ms by bot id=8360260573
+2025-09-13 03:19:07,807 - INFO - Пользователь 7665269659: Получен текст: Да, хочу
+2025-09-13 03:19:09,266 - ERROR - Google CSE HTTP ошибка: 429
+2025-09-13 03:19:10,875 - INFO - HTTP Request: POST https://openrouter.ai/api/v1/chat/completions "HTTP/1.1 200 OK"
+2025-09-13 03:19:42,123 - WARNING - URL мини-аппки слишком длинный, кнопка не добавлена.
+2025-09-13 03:19:42,486 - INFO - Активная тема для пользователя 7665269659: музыка
+2025-09-13 03:19:42,487 - INFO - Update id=200546427 is handled. Duration 34681 ms by bot id=8360260573
+2025-09-13 03:19:46,213 - INFO - Пользователь 7944167500: Получен текст: Ку ку
+2025-09-13 03:19:47,786 - ERROR - Google CSE HTTP ошибка: 429
+2025-09-13 03:19:47,788 - INFO - История для пользователя 7944167500: [{'role': 'user', 'content': 'Ку ку'}]
+2025-09-13 03:19:49,531 - INFO - HTTP Request: POST https://openrouter.ai/api/v1/chat/completions "HTTP/1.1 200 OK"
+2025-09-13 03:19:52,779 - WARNING - URL мини-аппки слишком длинный, кнопка не добавлена.
+2025-09-13 03:19:53,162 - INFO - Активная тема для пользователя 7944167500: привет!
+2025-09-13 03:19:53,162 - INFO - Update id=200546428 is handled. Duration 6949 ms by bot id=8360260573
+2025-09-13 03:20:58,267 - INFO - Пользователь 7665269659: Получен текст: Бред
+2025-09-13 03:20:59,576 - ERROR - Google CSE HTTP ошибка: 429
+2025-09-13 03:21:01,404 - INFO - HTTP Request: POST https://openrouter.ai/api/v1/chat/completions "HTTP/1.1 200 OK"
+2025-09-13 03:21:10,548 - WARNING - URL мини-аппки слишком длинный, кнопка не добавлена.
+2025-09-13 03:21:10,874 - INFO - Активная тема для пользователя 7665269659: мне
+2025-09-13 03:21:10,881 - INFO - Update id=200546429 is handled. Duration 12615 ms by bot id=8360260573
+2025-09-13 03:23:42,502 - INFO - Пользователь 7665269659: Получен текст: Во первых не Самойлов, а Васильев, во вторых нет у него трека восход и люди смотрят вверх, в третьих он не имеет никакого отношения к группе Агата Кристи, в третьих нет у него трека на кухне и где мы
+2025-09-13 03:23:44,198 - ERROR - Google CSE HTTP ошибка: 429
+2025-09-13 03:23:46,107 - INFO - HTTP Request: POST https://openrouter.ai/api/v1/chat/completions "HTTP/1.1 200 OK"
+2025-09-13 03:24:02,726 - WARNING - URL мини-аппки слишком длинный, кнопка не добавлена.
+2025-09-13 03:24:03,073 - INFO - Активная тема для пользователя 7665269659: общее
+2025-09-13 03:24:03,073 - INFO - Update id=200546430 is handled. Duration 20571 ms by bot id=8360260573
+2025-09-13 03:25:27,757 - INFO - Пользователь 7665269659: Получен текст: Всё-таки кто исполнитель три дня дождя?
+2025-09-13 03:25:29,448 - ERROR - Google CSE HTTP ошибка: 429
+2025-09-13 03:25:31,989 - INFO - HTTP Request: POST https://openrouter.ai/api/v1/chat/completions "HTTP/1.1 200 OK"
+2025-09-13 03:25:49,265 - WARNING - URL мини-аппки слишком длинный, кнопка не добавлена.
+2025-09-13 03:25:49,569 - INFO - Активная тема для пользователя 7665269659: общее
+2025-09-13 03:25:49,577 - INFO - Update id=200546431 is handled. Duration 21820 ms by bot id=8360260573
+2025-09-13 03:26:51,454 - INFO - Пользователь 7665269659: Получен текст: Как зовут певца мукка
+2025-09-13 03:26:53,000 - ERROR - Google CSE HTTP ошибка: 429
+2025-09-13 03:26:55,364 - INFO - HTTP Request: POST https://openrouter.ai/api/v1/chat/completions "HTTP/1.1 200 OK"
+2025-09-13 03:27:13,866 - WARNING - URL мини-аппки слишком длинный, кнопка не добавлена.
+2025-09-13 03:27:14,141 - INFO - Активная тема для пользователя 7665269659: музыка
+2025-09-13 03:27:14,148 - INFO - Update id=200546432 is handled. Duration 22695 ms by bot id=8360260573
+2025-09-13 03:27:16,324 - INFO - Update id=200546433 is handled. Duration 254 ms by bot id=8360260573
+2025-09-13 03:28:36,146 - INFO - Пользователь 7665269659: Получен текст: Ясно короче с тобой все, ты тупо меня обманываешь, выдумываешь, галлюцинируешь, а потом говоришь что случайно ошиблась, если не знаешь, могла бы так и сказать, а не выдумывать, мда уж ....
+2025-09-13 03:28:37,685 - ERROR - Google CSE HTTP ошибка: 429
+2025-09-13 03:28:39,713 - INFO - HTTP Request: POST https://openrouter.ai/api/v1/chat/completions "HTTP/1.1 200 OK"
+2025-09-13 03:28:53,029 - WARNING - URL мини-аппки слишком длинный, кнопка не добавлена.
+2025-09-13 03:28:53,346 - INFO - Активная тема для пользователя 7665269659: мне
+2025-09-13 03:28:53,346 - INFO - Update id=200546434 is handled. Duration 17201 ms by bot id=8360260573
+2025-09-13 03:30:04,917 - INFO - Пользователь 7665269659: Получен текст: Как зовут певца мукка?
+2025-09-13 03:30:06,502 - ERROR - Google CSE HTTP ошибка: 429
+2025-09-13 03:30:08,332 - INFO - HTTP Request: POST https://openrouter.ai/api/v1/chat/completions "HTTP/1.1 200 OK"
+2025-09-13 03:30:25,536 - WARNING - URL мини-аппки слишком длинный, кнопка не добавлена.
+2025-09-13 03:30:25,807 - INFO - Активная тема для пользователя 7665269659: музыка
+2025-09-13 03:30:25,808 - INFO - Update id=200546435 is handled. Duration 20891 ms by bot id=8360260573
+2025-09-13 03:31:29,765 - ERROR - Google CSE HTTP ошибка: 429
+2025-09-13 03:31:31,671 - INFO - HTTP Request: POST https://openrouter.ai/api/v1/chat/completions "HTTP/1.1 200 OK"
+2025-09-13 03:31:45,861 - WARNING - Исправлен HTML: Ты снова абсолютно прав, и мне очень жаль, что я опять допустила ошибку и подвела тебя. Спасибо, что... -> Ты снова абсолютно прав, и мне очень жаль, что я опять допустила ошибку и подвела тебя. Спасибо, что...
+2025-09-13 03:31:45,863 - WARNING - URL мини-аппки слишком длинный, кнопка не добавлена.
+2025-09-13 03:31:46,118 - INFO - Активная тема для пользователя 7665269659: общее
+2025-09-13 03:31:46,119 - INFO - Update id=200546436 is handled. Duration 17927 ms by bot id=8360260573
+2025-09-13 03:32:29,344 - INFO - Пользователь 7665269659: Получен текст: Молчание»<br>
+• «Люби меня люби» (кавер-версия)<br>
+• «Не отпускай»
+Нет у него таких треков
+2025-09-13 03:32:30,973 - ERROR - Google CSE HTTP ошибка: 429
+2025-09-13 03:32:33,095 - INFO - HTTP Request: POST https://openrouter.ai/api/v1/chat/completions "HTTP/1.1 200 OK"
+2025-09-13 03:32:49,182 - WARNING - Исправлен HTML: Ты снова прав, и мне искренне жаль, что я опять допустила неточность. Спасибо, что терпеливо исправл... -> Ты снова прав, и мне искренне жаль, что я опять допустила неточность. Спасибо, что терпеливо исправл...
+2025-09-13 03:32:49,183 - WARNING - URL мини-аппки слишком длинный, кнопка не добавлена.
+2025-09-13 03:32:49,466 - INFO - Активная тема для пользователя 7665269659: ты
+2025-09-13 03:32:49,473 - INFO - Update id=200546437 is handled. Duration 20130 ms by bot id=8360260573
+2025-09-13 03:33:31,435 - INFO - Пользователь 7665269659: Получен текст: популярность.<br>
+• «Без фокуса»<br>
+• «Куришь»<br>
+• «Детка»<br>
+• «Навсегда»
+И таких тоже нету, пока в общем, тупо обманываешь меня
+2025-09-13 03:33:33,188 - ERROR - Google CSE HTTP ошибка: 429
+2025-09-13 03:33:34,737 - INFO - HTTP Request: POST https://openrouter.ai/api/v1/chat/completions "HTTP/1.1 429 Too Many Requests"
+2025-09-13 03:33:34,740 - INFO - Retrying request to /chat/completions in 0.467710 seconds
+2025-09-13 03:33:35,702 - INFO - HTTP Request: POST https://openrouter.ai/api/v1/chat/completions "HTTP/1.1 429 Too Many Requests"
+2025-09-13 03:33:35,705 - INFO - Retrying request to /chat/completions in 0.996753 seconds
+2025-09-13 03:33:37,126 - INFO - HTTP Request: POST https://openrouter.ai/api/v1/chat/completions "HTTP/1.1 429 Too Many Requests"
+2025-09-13 03:33:37,283 - ERROR - Ошибка OpenRouter API (попытка 1/3): Error code: 429 - {'error': {'message': 'Rate limit exceeded: free-models-per-day. Add 10 credits to unlock 1000 free model requests per day', 'code': 429, 'metadata': {'headers': {'X-RateLimit-Limit': '50', 'X-RateLimit-Remaining': '0', 'X-RateLimit-Reset': '1757635200000'}, 'provider_name': None}}, 'user_id': 'user_32Nfnj5XM7vOESBwZscYJ8wnlBI'}
+2025-09-13 03:33:37,284 - INFO - Повторная попытка 1 через 1 секунд...
+2025-09-13 03:33:39,017 - INFO - HTTP Request: POST https://openrouter.ai/api/v1/chat/completions "HTTP/1.1 429 Too Many Requests"
+2025-09-13 03:33:39,162 - INFO - Retrying request to /chat/completions in 0.402646 seconds
+2025-09-13 03:33:40,024 - INFO - HTTP Request: POST https://openrouter.ai/api/v1/chat/completions "HTTP/1.1 429 Too Many Requests"
+2025-09-13 03:33:40,184 - INFO - Retrying request to /chat/completions in 0.933451 seconds
+2025-09-13 03:33:41,596 - INFO - HTTP Request: POST https://openrouter.ai/api/v1/chat/completions "HTTP/1.1 429 Too Many Requests"
+2025-09-13 03:33:41,739 - ERROR - Ошибка OpenRouter API (попытка 2/3): Error code: 429 - {'error': {'message': 'Rate limit exceeded: free-models-per-day. Add 10 credits to unlock 1000 free model requests per day', 'code': 429, 'metadata': {'headers': {'X-RateLimit-Limit': '50', 'X-RateLimit-Remaining': '0', 'X-RateLimit-Reset': '1757635200000'}, 'provider_name': None}}, 'user_id': 'user_32Nfnj5XM7vOESBwZscYJ8wnlBI'}
+2025-09-13 03:33:41,741 - INFO - Повторная попытка 2 через 2 секунд...
+2025-09-13 03:33:44,345 - INFO - HTTP Request: POST https://openrouter.ai/api/v1/chat/completions "HTTP/1.1 429 Too Many Requests"
+2025-09-13 03:33:44,348 - INFO - Retrying request to /chat/completions in 0.413540 seconds
+2025-09-13 03:33:45,276 - INFO - HTTP Request: POST https://openrouter.ai/api/v1/chat/completions "HTTP/1.1 429 Too Many Requests"
+2025-09-13 03:33:45,279 - INFO - Retrying request to /chat/completions in 0.788588 seconds
+2025-09-13 03:33:46,520 - INFO - HTTP Request: POST https://openrouter.ai/api/v1/chat/completions "HTTP/1.1 429 Too Many Requests"
+2025-09-13 03:33:46,679 - ERROR - Ошибка OpenRouter API (попытка 3/3): Error code: 429 - {'error': {'message': 'Rate limit exceeded: free-models-per-day. Add 10 credits to unlock 1000 free model requests per day', 'code': 429, 'metadata': {'headers': {'X-RateLimit-Limit': '50', 'X-RateLimit-Remaining': '0', 'X-RateLimit-Reset': '1757635200000'}, 'provider_name': None}}, 'user_id': 'user_32Nfnj5XM7vOESBwZscYJ8wnlBI'}
+2025-09-13 03:33:46,686 - WARNING - URL мини-аппки слишком длинный, кнопка не добавлена.
+2025-09-13 03:33:47,011 - INFO - Активная тема для пользователя 7665269659: общее
+2025-09-13 03:33:47,084 - INFO - Update id=200546438 is handled. Duration 15650 ms by bot id=8360260573
+2025-09-13 13:49:30,384 - INFO - Start polling
+2025-09-13 13:50:06,934 - INFO - Пользователь 7665269659: Получен текст: Привет, как зовут солиста группы на на
+2025-09-13 13:50:43,078 - INFO - Пользователь 7665269659: Получен текст: Привет
+2025-09-13 13:50:43,089 - INFO - Пользователь 7665269659: Получен текст: При
+2025-09-13 13:50:43,454 - INFO - Update id=200546441 is handled. Duration 371 ms by bot id=8360260573
+2025-09-13 13:50:44,650 - WARNING - URL https://www.facebook.com/groups/wwwphila/posts/2389507617891011/ недоступен: Cannot connect to host www.facebook.com:443 ssl:default [Указанное сетевое имя более недоступно]
+2025-09-13 13:50:50,205 - WARNING - URL https://www.reddit.com/r/Corsair/comments/1hs3zl2/rgb_lights_turn_off_when_starting_a_game/?tl=ru недоступен: 
+2025-09-13 13:50:50,207 - WARNING - URL https://www.instagram.com/p/DEUw1S2IwWW/ недоступен: 
+2025-09-13 13:50:51,201 - WARNING - URL https://www.reddit.com/r/russian/comments/16ckcbe/%D0%BF%D1%80%D0%B8%D0%B2%D0%B5%D1%82_or_%D0%B7%D0%B4%D1%80%D0%B0%D0%B2%D1%81%D1%82%D0%B2%D1%83%D0%B9%D1%82%D0%B5/ недоступен: 
+2025-09-13 13:50:51,446 - WARNING - URL https://open.spotify.com/artist/5qBBDkAle9weX0YomfZJxN недоступен: Cannot connect to host open.spotify.com:443 ssl:True [SSLCertVerificationError: (5, '[SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: unable to get local issuer certificate (_ssl.c:1032)')]
+2025-09-13 13:50:51,921 - INFO - История для пользователя 7665269659: [{'role': 'user', 'content': 'Привет, как зовут солиста группы на на'}, {'role': 'user', 'content': 'Привет'}, {'role': 'user', 'content': 'При'}]
+2025-09-13 13:50:55,336 - INFO - HTTP Request: POST https://openrouter.ai/api/v1/chat/completions "HTTP/1.1 200 OK"
+2025-09-13 13:50:56,217 - WARNING - URL https://ru.rockymountaincancercenters.com/blog/lung-cancer-gene-mutations-what-are-they-and-how-do-they-affect-treatment недоступен: 
+2025-09-13 13:50:57,213 - WARNING - URL https://www.reddit.com/r/LowSodiumCyberpunk/comments/kl4vnk/what_is_the_context_for_this_greetings_from_des/?tl=ru недоступен: 
+2025-09-13 13:50:58,467 - INFO - История для пользователя 7665269659: [{'role': 'user', 'content': 'Привет, как зовут солиста группы на на'}, {'role': 'user', 'content': 'Привет'}, {'role': 'user', 'content': 'При'}]
+2025-09-13 13:50:59,823 - INFO - HTTP Request: POST https://openrouter.ai/api/v1/chat/completions "HTTP/1.1 200 OK"
+2025-09-13 13:51:02,216 - WARNING - URL https://www.reddit.com/r/S22Ultra/comments/u563ef/how_to_turn_off_ready_to_connect_when_network/?tl=ru недоступен: 
+2025-09-13 13:51:08,291 - WARNING - URL мини-аппки слишком длинный, кнопка не добавлена.
+2025-09-13 13:51:08,535 - INFO - Активная тема для пользователя 7665269659: музыка
+2025-09-13 13:51:08,537 - INFO - Update id=200546440 is handled. Duration 25460 ms by bot id=8360260573
+2025-09-13 13:51:11,405 - WARNING - URL мини-аппки слишком длинный, кнопка не добавлена.
+2025-09-13 13:51:11,624 - INFO - Активная тема для пользователя 7665269659: музыка
+2025-09-13 13:51:11,626 - INFO - Update id=200546439 is handled. Duration 64693 ms by bot id=8360260573
+2025-09-13 13:51:12,213 - WARNING - URL https://www.reddit.com/r/ios/comments/zxq54r/ios_keyboard_click_sound_suddenly_becomes_loud/?tl=ru недоступен: 
+2025-09-13 13:51:16,172 - INFO - HTTP Request: POST https://openrouter.ai/api/v1/chat/completions "HTTP/1.1 200 OK"
+2025-09-13 13:51:54,047 - WARNING - URL мини-аппки слишком длинный, кнопка не добавлена.
+2025-09-13 13:51:54,353 - INFO - Активная тема для пользователя 7665269659: привет!
+2025-09-13 13:51:54,354 - INFO - Update id=200546442 is handled. Duration 71265 ms by bot id=8360260573
+2025-09-13 13:53:12,799 - INFO - Пользователь 7944167500: Получен текст: Привет, хочу узнать где вкусно покушать в Бийске
+2025-09-13 13:53:19,212 - WARNING - URL https://www.reddit.com/r/Kyrgyzstan/comments/1n4bti1/bishkek_veg_food_recommendations/?tl=ru недоступен: 
+2025-09-13 13:53:19,288 - WARNING - URL https://www.facebook.com/groups/obmendomami/posts/9535601683188534/ недоступен: Cannot connect to host www.facebook.com:443 ssl:default [Указанное сетевое имя более недоступно]
+2025-09-13 13:53:25,206 - WARNING - URL https://www.instagram.com/p/C4mij4NIVlo/ недоступен: 
+2025-09-13 13:53:31,216 - WARNING - URL https://www.reddit.com/r/Kyrgyzstan/comments/1abi9vy/your_favorite_places_food_things_to_do_in_bishkek/?tl=ru недоступен: 
+2025-09-13 13:53:33,409 - INFO - История для пользователя 7944167500: [{'role': 'user', 'content': 'Привет, хочу узнать где вкусно покушать в Бийске'}]
+2025-09-13 13:53:35,708 - INFO - HTTP Request: POST https://openrouter.ai/api/v1/chat/completions "HTTP/1.1 200 OK"
+2025-09-13 13:53:58,107 - WARNING - URL мини-аппки слишком длинный, кнопка не добавлена.
+2025-09-13 13:53:58,316 - INFO - Активная тема для пользователя 7944167500: привет!
+2025-09-13 13:53:58,318 - INFO - Update id=200546443 is handled. Duration 45519 ms by bot id=8360260573
+2025-09-13 13:55:08,769 - INFO - Пользователь 7944167500: Получен текст: Как зовут солиста группы руки вверх
+2025-09-13 13:55:17,216 - WARNING - URL https://www.instagram.com/potekhinalex/ недоступен: 
+2025-09-13 13:55:22,058 - INFO - HTTP Request: POST https://openrouter.ai/api/v1/chat/completions "HTTP/1.1 200 OK"
+2025-09-13 13:55:35,374 - WARNING - URL мини-аппки слишком длинный, кнопка не добавлена.
+2025-09-13 13:55:35,668 - INFO - Активная тема для пользователя 7944167500: музыка
+2025-09-13 13:55:35,669 - INFO - Update id=200546444 is handled. Duration 26901 ms by bot id=8360260573
+2025-09-13 13:58:17,103 - INFO - Пользователь 7665269659: Получен текст: Тара тата
+2025-09-13 13:58:24,209 - WARNING - URL https://www.youtube.com/watch?v=iJqTLlURYGY недоступен: 
+2025-09-13 13:58:30,214 - WARNING - URL https://www.reddit.com/r/tattoo/comments/xx8841/my_green_tara_hand_holding_a_lotus_forearm_tattoo/?tl=ru недоступен: 
+2025-09-13 13:58:36,214 - WARNING - URL https://www.reddit.com/r/whatstheword/comments/oerj01/itaw_for_when_you_start_singing_like_tu_tu_tu/?tl=ru недоступен: 
+2025-09-13 13:58:37,196 - WARNING - URL https://www.tattoomarket.ru/catalog/tara-pod-krasku недоступен: Cannot connect to host www.tattoomarket.ru:443 ssl:True [SSLCertVerificationError: (5, '[SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: self-signed certificate in certificate chain (_ssl.c:1032)')]
+2025-09-13 13:58:39,897 - INFO - HTTP Request: POST https://openrouter.ai/api/v1/chat/completions "HTTP/1.1 200 OK"
+2025-09-13 13:59:21,508 - WARNING - URL мини-аппки слишком длинный, кнопка не добавлена.
+2025-09-13 13:59:21,885 - INFO - Активная тема для пользователя 7665269659: музыка
+2025-09-13 13:59:21,887 - INFO - Update id=200546445 is handled. Duration 64783 ms by bot id=8360260573
+2025-09-13 14:22:34,573 - INFO - Polling stopped
+2025-09-13 14:22:34,576 - ERROR - Failed to fetch updates - TelegramNetworkError: HTTP Client says - ServerDisconnectedError: Server disconnected
+2025-09-13 14:22:34,576 - WARNING - Sleep for 1.000000 seconds and try again... (tryings = 0, bot id = 8360260573)
