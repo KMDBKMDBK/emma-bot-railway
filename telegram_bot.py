@@ -8,7 +8,7 @@ from aiogram import Bot, Dispatcher, types
 from aiogram.filters import Command, CommandStart
 from aiogram.types import BotCommand, InlineKeyboardMarkup, InlineKeyboardButton
 from fastapi import FastAPI, Request
-from contextlib import asynccontextmanager  # Добавлено для lifespan
+from contextlib import asynccontextmanager
 import aiohttp
 import urllib.parse
 import re
@@ -80,7 +80,7 @@ app = FastAPI()
 
 # Хранилище для данных пользователя и обработанных update_id
 user_data = {}
-processed_updates = set()  # Добавлено для отслеживания дубликатов update_id
+processed_updates = set()
 
 # Ключевые слова для уточняющих запросов
 clarification_keywords = [
@@ -232,7 +232,7 @@ async def get_google_cse_info(query: str, active_topic: str = None):
         logging.error(f"Ошибка Google CSE: {e}")
         return None
 
-async def get_unlim_response(user_id: int, user_text: str, history: list, is_code_request=False, search_data=None, use_html=True, max_retries=5):  # Изменено max_retries на 5
+async def get_unlim_response(user_id: int, user_text: str, history: list, is_code_request=False, search_data=None, use_html=True, max_retries=5):
     logging.info(f"Запрос к OpenRouter для user {user_id}: {user_text[:50]}...")
     for attempt in range(max_retries + 1):
         try:
@@ -411,7 +411,7 @@ async def start(message: types.Message):
     if sent_message is None:
         sent_message = await message.answer(start_text, parse_mode="HTML")
         logging.info(f"Отправлено текстовое сообщение для /start, message_id: {sent_message.message_id}")
-    if db:  # Добавлено сохранение в Firestore
+    if db:
         try:
             db.collection('users').document(str(user_id)).set(user_data[user_id], merge=True)
             logging.info(f"Сохранены user_data для {user_id} в Firestore")
@@ -455,7 +455,7 @@ async def info(message: types.Message):
         "<i>Спасибо, что выбрал меня, друг — вместе мы сможем сделать каждый день особенным. Жду с нетерпением нашей встречи!</i> 💕"
     )
     await message.answer(info_text, parse_mode="HTML")
-    if db:  # Добавлено сохранение в Firestore
+    if db:
         try:
             db.collection('users').document(str(user_id)).set(user_data[user_id], merge=True)
             logging.info(f"Сохранены user_data для {user_id} в Firestore")
@@ -478,7 +478,7 @@ async def clear_history(message: types.Message):
         'user_feedback_message_id': None
     }
     await message.answer("История очищена! 😊 Начинаем с чистого листа.", parse_mode="HTML")
-    if db:  # Добавлено сохранение в Firestore
+    if db:
         try:
             db.collection('users').document(str(user_id)).set(user_data[user_id], merge=True)
             logging.info(f"Сохранены user_data для {user_id} в Firestore")
@@ -545,7 +545,7 @@ async def pay(message: types.Message):
         sent_message = await message.answer(pay_text, reply_markup=reply_markup, parse_mode="HTML")
         logging.info(f"Отправлено текстовое сообщение для /pay, message_id: {sent_message.message_id}")
     user_data[user_id]['last_pay_message_id'] = sent_message.message_id
-    if db:  # Добавлено сохранение в Firestore
+    if db:
         try:
             db.collection('users').document(str(user_id)).set(user_data[user_id], merge=True)
             logging.info(f"Сохранены user_data для {user_id} в Firestore")
@@ -593,7 +593,7 @@ async def feedback(message: types.Message):
         logging.error(f"Ошибка при отправке сообщения /feedback: {e}")
         await message.answer("Ой, что-то пошло не так! 😔 Попробуй снова.", parse_mode="HTML")
         user_data[user_id]['awaiting_feedback'] = False
-    if db:  # Добавлено сохранение в Firestore
+    if db:
         try:
             db.collection('users').document(str(user_id)).set(user_data[user_id], merge=True)
             logging.info(f"Сохранены user_data для {user_id} в Firestore")
@@ -618,7 +618,6 @@ async def cancel(message: types.Message):
         }
     if user_data[user_id].get('awaiting_feedback', False):
         user_data[user_id]['awaiting_feedback'] = False
-        # Удаляем сообщения /feedback, если они существуют
         try:
             if user_data[user_id].get('feedback_message_id'):
                 await bot.delete_message(
@@ -639,7 +638,7 @@ async def cancel(message: types.Message):
         await message.answer("Режим обратной связи отменён! 😊 Можешь продолжить общение с Эммой.", parse_mode="HTML")
     else:
         await message.answer("Ничего не было запущено, так что всё ок! 😊 Можешь задавать вопросы или использовать команды.", parse_mode="HTML")
-    if db:  # Добавлено сохранение в Firestore
+    if db:
         try:
             db.collection('users').document(str(user_id)).set(user_data[user_id], merge=True)
             logging.info(f"Сохранены user_data для {user_id} в Firestore")
@@ -740,7 +739,7 @@ async def cancel_feedback_callback(callback: types.CallbackQuery):
             parse_mode="HTML"
         )
     await callback.answer()
-    if db:  # Добавлено сохранение в Firestore
+    if db:
         try:
             db.collection('users').document(str(user_id)).set(user_data[user_id], merge=True)
             logging.info(f"Сохранены user_data для {user_id} в Firestore")
@@ -786,7 +785,7 @@ async def start_pay_callback(callback: types.CallbackQuery):
             parse_mode="HTML"
         )
         await callback.answer()
-    if db:  # Добавлено сохранение в Firestore
+    if db:
         try:
             db.collection('users').document(str(user_id)).set(user_data[user_id], merge=True)
             logging.info(f"Сохранены user_data для {user_id} в Firestore")
@@ -799,7 +798,7 @@ async def process_pre_checkout_query(pre_checkout_query: types.PreCheckoutQuery)
     user_id = pre_checkout_query.from_user.id
     logging.info(f"Pre-checkout query от пользователя {user_id}: {pre_checkout_query.invoice_payload}")
     await bot.answer_pre_checkout_query(pre_checkout_query.id, ok=True)
-    if db:  # Добавлено сохранение в Firestore
+    if db:
         try:
             db.collection('users').document(str(user_id)).set(user_data[user_id], merge=True)
             logging.info(f"Сохранены user_data для {user_id} в Firestore")
@@ -860,7 +859,6 @@ async def handle_message(message: types.Message):
             'user_feedback_message_id': None
         }
     
-    # Проверяем, ожидается ли обратная связь
     if user_data[user_id].get('awaiting_feedback', False):
         if not FEEDBACK_CHAT_ID:
             logging.error("FEEDBACK_CHAT_ID не указан в .env")
@@ -868,7 +866,7 @@ async def handle_message(message: types.Message):
             user_data[user_id]['awaiting_feedback'] = False
             user_data[user_id]['feedback_message_id'] = None
             user_data[user_id]['user_feedback_message_id'] = None
-            if db:  # Добавлено сохранение в Firestore
+            if db:
                 try:
                     db.collection('users').document(str(user_id)).set(user_data[user_id], merge=True)
                     logging.info(f"Сохранены user_data для {user_id} в Firestore")
@@ -889,7 +887,6 @@ async def handle_message(message: types.Message):
                 parse_mode="HTML"
             )
             logging.info(f"Сообщение обратной связи от {user_id} переслано в чат {FEEDBACK_CHAT_ID}")
-            # Удаляем сообщения /feedback
             try:
                 if user_data[user_id].get('feedback_message_id'):
                     await bot.delete_message(
@@ -917,7 +914,7 @@ async def handle_message(message: types.Message):
             user_data[user_id]['awaiting_feedback'] = False
             user_data[user_id]['feedback_message_id'] = None
             user_data[user_id]['user_feedback_message_id'] = None
-            if db:  # Добавлено сохранение в Firestore
+            if db:
                 try:
                     db.collection('users').document(str(user_id)).set(user_data[user_id], merge=True)
                     logging.info(f"Сохранены user_data для {user_id} в Firestore")
@@ -933,7 +930,7 @@ async def handle_message(message: types.Message):
             user_data[user_id]['awaiting_feedback'] = False
             user_data[user_id]['feedback_message_id'] = None
             user_data[user_id]['user_feedback_message_id'] = None
-            if db:  # Добавлено сохранение в Firestore
+            if db:
                 try:
                     db.collection('users').document(str(user_id)).set(user_data[user_id], merge=True)
                     logging.info(f"Сохранены user_data для {user_id} в Firestore")
@@ -941,7 +938,6 @@ async def handle_message(message: types.Message):
                     logging.error(f"Ошибка сохранения user_data: {e}")
             return
     
-    # Оригинальная логика обработки сообщений
     history = user_data[user_id]['history']
     active_topic = user_data[user_id]['active_topic']
     is_code_request = any(keyword in user_text.lower() for keyword in [
@@ -979,7 +975,7 @@ async def handle_message(message: types.Message):
     user_data[user_id]['active_topic'] = extract_topic(response)
     logging.info(f"Обновлённая история для пользователя {user_id}: {user_data[user_id]['history']}")
     logging.info(f"Активная тема для пользователя {user_id}: {user_data[user_id]['active_topic']}")
-    if db:  # Добавлено сохранение в Firestore
+    if db:
         try:
             db.collection('users').document(str(user_id)).set(user_data[user_id], merge=True)
             logging.info(f"Сохранены user_data для {user_id} в Firestore")
@@ -1019,14 +1015,13 @@ async def handle_callback(callback: types.CallbackQuery):
     user_data[user_id]['history'] = history[-20:]
     user_data[user_id]['active_topic'] = extract_topic(response)
     await callback.answer()
-    if db:  # Добавлено сохранение в Firestore
+    if db:
         try:
             db.collection('users').document(str(user_id)).set(user_data[user_id], merge=True)
             logging.info(f"Сохранены user_data для {user_id} в Firestore")
         except Exception as e:
             logging.error(f"Ошибка сохранения user_data: {e}")
 
-# Webhook endpoint для FastAPI
 @app.post("/webhook")
 async def webhook(request: Request):
     try:
@@ -1044,42 +1039,6 @@ async def webhook(request: Request):
         logging.error(f"Webhook ошибка: {e}", exc_info=True)
         return {"status": "error"}
 
-# Замена on_event на lifespan для корректного управления webhook
-@asynccontextmanager
-async def lifespan(app: FastAPI):
-    # Startup
-    try:
-        render_url = os.getenv('RENDER_URL')
-        if not render_url:
-            logging.error("RENDER_URL не указан в переменных окружения!")
-            render_url = "emma-bot-render.onrender.com"
-        webhook_url = f"https://{render_url}/webhook"
-        await bot.set_webhook(webhook_url)
-        info = await bot.get_webhook_info()
-        logging.info(f"Startup: Webhook установлен на {info.url}, pending updates: {info.pending_update_count}")
-        await set_bot_commands()
-        # Загрузка user_data из Firestore
-        if db:
-            try:
-                docs = db.collection('users').stream()
-                for doc in docs:
-                    user_data[int(doc.id)] = doc.to_dict()
-                logging.info("Загружены user_data из Firestore")
-            except Exception as e:
-                logging.error(f"Ошибка загрузки user_data: {e}")
-    except Exception as e:
-        logging.error(f"Startup ошибка: {e}", exc_info=True)
-    yield
-    # Shutdown
-    try:
-        await bot.delete_webhook()
-        logging.info("Shutdown: Webhook удалён")
-    except Exception as e:
-        logging.error(f"Shutdown ошибка: {e}", exc_info=True)
-
-app = FastAPI(lifespan=lifespan)  # Переопределяем app с lifespan
-
-# Health check endpoint
 @app.get("/health")
 async def health_check():
     try:
@@ -1094,6 +1053,41 @@ async def health_check():
         logging.error(f"Health check ошибка: {e}", exc_info=True)
         return {"status": "error", "bot_ready": False}
 
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    try:
+        render_url = os.getenv('RENDER_URL')
+        if not render_url:
+            logging.error("RENDER_URL не указан в переменных окружения!")
+            render_url = "emma-bot-render.onrender.com"
+        webhook_url = f"https://{render_url}/webhook"
+        await bot.set_webhook(webhook_url)
+        info = await bot.get_webhook_info()
+        logging.info(f"Startup: Webhook установлен на {info.url}, pending updates: {info.pending_update_count}")
+        await set_bot_commands()
+        if db:
+            try:
+                docs = db.collection('users').stream()
+                for doc in docs:
+                    try:
+                        user_id_int = int(doc.id)
+                        user_data[user_id_int] = doc.to_dict()
+                    except ValueError:
+                        logging.warning(f"Пропуск невалидного user_id: {doc.id} (не число)")
+                logging.info("Загружены user_data из Firestore")
+            except Exception as e:
+                logging.error(f"Ошибка загрузки user_data: {e}")
+    except Exception as e:
+        logging.error(f"Startup ошибка: {e}", exc_info=True)
+    yield
+    try:
+        await bot.delete_webhook()
+        logging.info("Shutdown: Webhook удалён")
+    except Exception as e:
+        logging.error(f"Shutdown ошибка: {e}", exc_info=True)
+
+app = FastAPI(lifespan=lifespan)
+
 if __name__ == '__main__':
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=int(os.getenv("PORT", 8000)), workers=1)  # Добавлено workers=1
+    uvicorn.run(app, host="0.0.0.0", port=int(os.getenv("PORT", 8000)), workers=1)
