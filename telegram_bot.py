@@ -44,7 +44,7 @@ else:
         logging.warning("Firebase не инициализирован (проверь FIREBASE_CREDENTIALS_PATH или FIREBASE_CREDENTIALS_JSON)")
 
 # Настройка логов
-logging.basicConfig(level=logging.INFO)
+logging.basicBasicConfig(level=logging.INFO)
 
 # Загрузка переменных окружения
 TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN")
@@ -230,7 +230,7 @@ async def get_google_cse_info(query: str, active_topic: str = None):
         logging.error(f"Ошибка Google CSE: {e}")
         return None
 
-async def get_unlim_response(user_id: int, user_text: str, history: list, is_code_request=False, search_data=None, use_html=True):
+async def get_unlim_response(user_id: int, user_text: str, history: list, is_code_request=False, search_data=None, use_html=True, max_retries=2):
     for attempt in range(max_retries + 1):
         try:
             if any(q in user_text.lower() for q in ["сколько тебе лет", "как тебя зовут", "что ты помнишь обо мне"]):
@@ -955,7 +955,7 @@ async def on_shutdown():
     await bot.delete_webhook()
     logging.info("Webhook удалён")
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     import uvicorn
     asyncio.run(set_bot_commands())  # Установка команд при запуске
     uvicorn.run(app, host="0.0.0.0", port=int(os.getenv("PORT", 8000)))
