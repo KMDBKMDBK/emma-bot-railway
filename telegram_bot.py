@@ -44,7 +44,7 @@ else:
         logging.warning("Firebase не инициализирован (проверь FIREBASE_CREDENTIALS_PATH или FIREBASE_CREDENTIALS_JSON)")
 
 # Настройка логов
-logging.basicBasicConfig(level=logging.INFO)
+logging.basicConfig(level=logging.INFO)
 
 # Загрузка переменных окружения
 TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN")
