@@ -1087,7 +1087,6 @@ async def lifespan(app: FastAPI):
         logging.error(f"Shutdown ошибка: {e}", exc_info=True)
 
 app = FastAPI(lifespan=lifespan)
-
 if __name__ == '__main__':
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=int(os.getenv("PORT", 8000)), workers=1)
