@@ -939,7 +939,7 @@ async def handle_callback(callback: types.CallbackQuery):
 @app.post("/webhook")
 async def webhook(request: Request):
     update = await request.json()
-    await dp.process_update(types.Update(**update))
+    await dp.feed_update(bot, types.Update(**update))
     return {"status": "ok"}
 
 # Запуск webhook при старте
