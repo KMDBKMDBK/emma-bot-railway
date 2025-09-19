@@ -1,1 +1,1 @@
-web: gunicorn telegram_bot:app 
+web: uvicorn telegram_bot:app --host 0.0.0.0 --port $PORT

@@ -7,8 +7,7 @@ from openai import AsyncOpenAI
 from aiogram import Bot, Dispatcher, types
 from aiogram.filters import Command, CommandStart
 from aiogram.types import BotCommand, InlineKeyboardMarkup, InlineKeyboardButton
-from aiogram.webhook.aiohttp_server import SimpleRequestHandler, setup_application
-from aiohttp import web
+from fastapi import FastAPI, Request
 import aiohttp
 import urllib.parse
 import re
@@ -74,6 +73,9 @@ client = AsyncOpenAI(
 # Инициализация бота
 bot = Bot(token=TELEGRAM_TOKEN)
 dp = Dispatcher()
+
+# Инициализация FastAPI
+app = FastAPI()
 
 # Хранилище для данных пользователя
 user_data = {}
@@ -228,7 +230,7 @@ async def get_google_cse_info(query: str, active_topic: str = None):
         logging.error(f"Ошибка Google CSE: {e}")
         return None
 
-async def get_unlim_response(user_id: int, user_text: str, history: list, is_code_request=False, search_data=None, use_html=True, max_retries=2):
+async def get_unlim_response(user_id: int, user_text: str, history: list, is_code_request=False, search_data=None, use_html=True):
     for attempt in range(max_retries + 1):
         try:
             if any(q in user_text.lower() for q in ["сколько тебе лет", "как тебя зовут", "что ты помнишь обо мне"]):
@@ -933,34 +935,27 @@ async def handle_callback(callback: types.CallbackQuery):
     user_data[user_id]['active_topic'] = extract_topic(response)
     await callback.answer()
 
-async def main():
-    """Основная функция запуска бота."""
-    try:
-        await set_bot_commands()
-        # Fallback для локального запуска (polling), для Heroku (webhook)
-        if os.getenv("PORT"):
-            # Heroku: webhook
-            app = web.Application()
-            SimpleRequestHandler(dispatcher=dp, bot=bot).register(app, path="/webhook")
-            setup_application(app, dp, bot=bot)
-            app.on_startup.append(lambda app: asyncio.create_task(on_startup(app)))
-            app.on_shutdown.append(lambda app: asyncio.create_task(on_shutdown(app)))
-            web.run_app(app, host="0.0.0.0", port=int(os.getenv("PORT", 8080)))
-        else:
-            # Локально: polling
-            await dp.start_polling(bot, skip_updates=True)
-    except Exception as e:
-        logging.error(f"Ошибка при запуске бота: {e}")
-        raise
+# Webhook endpoint для FastAPI
+@app.post("/webhook")
+async def webhook(request: Request):
+    update = await request.json()
+    await dp.process_update(types.Update(**update))
+    return {"status": "ok"}
 
-async def on_startup(app):
+# Запуск webhook при старте
+@app.on_event("startup")
+async def on_startup():
     webhook_url = f"https://{os.getenv('RENDER_URL', 'emma-bot-render.onrender.com')}/webhook"
     await bot.set_webhook(webhook_url)
     logging.info(f"Webhook установлен на {webhook_url}")
 
-async def on_shutdown(app):
+# Очистка webhook при завершении
+@app.on_event("shutdown")
+async def on_shutdown():
     await bot.delete_webhook()
     logging.info("Webhook удалён")
 
-if __name__ == '__main__':
-    asyncio.run(main())
+if __name__ == "__main__":
+    import uvicorn
+    asyncio.run(set_bot_commands())  # Установка команд при запуске
+    uvicorn.run(app, host="0.0.0.0", port=int(os.getenv("PORT", 8000)))
