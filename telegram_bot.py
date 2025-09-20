@@ -384,7 +384,6 @@ async def start(message: types.Message):
     )
     sent_message = None
     if START_IMAGE_PATH.startswith("http"):
-        # Для облака: URL
         try:
             sent_message = await bot.send_photo(
                 chat_id=message.chat.id,
@@ -396,7 +395,6 @@ async def start(message: types.Message):
         except Exception as e:
             logging.error(f"Ошибка отправки фото для /start: {e}")
     else:
-        # Локально: FSInputFile
         if os.path.exists(START_IMAGE_PATH):
             try:
                 photo = types.FSInputFile(START_IMAGE_PATH)
@@ -515,7 +513,6 @@ async def pay(message: types.Message):
     ])
     sent_message = None
     if PAY_IMAGE_PATH.startswith("http"):
-        # Для облака: URL
         try:
             sent_message = await bot.send_photo(
                 chat_id=message.chat.id,
@@ -528,7 +525,6 @@ async def pay(message: types.Message):
         except Exception as e:
             logging.error(f"Ошибка отправки фото для /pay: {e}")
     else:
-        # Локально: FSInputFile
         if os.path.exists(PAY_IMAGE_PATH):
             try:
                 photo = types.FSInputFile(PAY_IMAGE_PATH)
@@ -710,7 +706,6 @@ async def handle_subscription_callback(callback: types.CallbackQuery):
             'user_feedback_message_id': None
         }
 
-    # Удаление предыдущего сообщения
     last_pay_message_id = user_data.get(user_id, {}).get('last_pay_message_id')
     if last_pay_message_id:
         try:
@@ -1267,12 +1262,9 @@ async def health_check():
         logging.error(f"Ошибка в health check: {e}", exc_info=True)
         return {"status": "error", "bot_ready": False, "error": str(e)}
 
-@app.post("/webhook/{token}")
-async def webhook(token: str, request: Request):
-    logging.debug(f"Получен webhook запрос: token={token}, headers={request.headers}")
-    if token != TELEGRAM_TOKEN:
-        logging.error("Неверный токен в webhook")
-        return {"status": "error", "message": "Invalid token"}
+@app.post("/webhook")
+async def webhook(request: Request):
+    logging.debug(f"Получен webhook запрос: headers={request.headers}")
     try:
         body = await request.body()
         logging.debug(f"Тело запроса: {body}")
