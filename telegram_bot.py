@@ -1039,20 +1039,6 @@ async def webhook(request: Request):
         logging.error(f"Webhook ошибка: {e}", exc_info=True)
         return {"status": "error"}
 
-@app.get("/health")
-async def health_check():
-    try:
-        info = await bot.get_webhook_info()
-        return {
-            "status": "ok",
-            "bot_ready": True,
-            "webhook_url": info.url,
-            "pending_updates": info.pending_update_count
-        }
-    except Exception as e:
-        logging.error(f"Health check ошибка: {e}", exc_info=True)
-        return {"status": "error", "bot_ready": False}
-
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     try:
