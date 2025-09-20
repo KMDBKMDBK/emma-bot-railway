@@ -1,4 +1,3 @@
-```python
 import logging
 import asyncio
 import os
@@ -19,10 +18,14 @@ import json
 import base64
 import time
 
+# Настройка логов
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+
 # Загрузка переменных окружения
 load_dotenv()
+logging.info("Переменные окружения загружены")
 
-# Инициализация Firebase (для облака: base64, для локального: путь)
+# Инициализация Firebase
 firebase_credentials = os.getenv("FIREBASE_CREDENTIALS_JSON")
 if firebase_credentials:
     try:
@@ -45,9 +48,6 @@ else:
         db = None
         logging.warning("Firebase не инициализирован (проверь FIREBASE_CREDENTIALS_PATH или FIREBASE_CREDENTIALS_JSON)")
 
-# Настройка логов
-logging.basicConfig(level=logging.INFO)
-
 # Загрузка переменных окружения
 TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN")
 FEEDBACK_CHAT_ID = os.getenv("FEEDBACK_CHAT_ID")
@@ -65,16 +65,19 @@ START_IMAGE_PATH = os.getenv("START_IMAGE_PATH", "./images/start_image.jpg")
 if not TELEGRAM_TOKEN:
     logging.error("TELEGRAM_TOKEN не указан в .env")
     exit(1)
+logging.info("Все переменные окружения проверены")
 
 # Настройка клиента OpenRouter API
 client = AsyncOpenAI(
     api_key=OPENROUTER_API_KEY,
     base_url="https://openrouter.ai/api/v1"
 )
+logging.info("OpenRouter API клиент инициализирован")
 
 # Инициализация бота
 bot = Bot(token=TELEGRAM_TOKEN)
 dp = Dispatcher()
+logging.info("Telegram бот и диспетчер инициализированы")
 
 # Хранилище для данных пользователя и обработанных update_id
 user_data = {}
@@ -1022,15 +1025,14 @@ async def handle_callback(callback: types.CallbackQuery):
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    logging.info("Запуск lifespan: настройка webhook и загрузка данных")
     try:
-        render_url = os.getenv('RENDER_URL')
-        if not render_url:
-            logging.error("RENDER_URL не указан в переменных окружения!")
-            render_url = "emma-bot-render.onrender.com"
+        render_url = os.getenv('RENDER_URL', 'emma-bot-render.onrender.com')
         webhook_url = f"https://{render_url}/webhook"
+        logging.info(f"Установка webhook на {webhook_url}")
         await bot.set_webhook(webhook_url)
         info = await bot.get_webhook_info()
-        logging.info(f"Startup: Webhook установлен на {info.url}, pending updates: {info.pending_update_count}")
+        logging.info(f"Webhook установлен: url={info.url}, pending_updates={info.pending_update_count}")
         await set_bot_commands()
         if db:
             try:
@@ -1039,43 +1041,29 @@ async def lifespan(app: FastAPI):
                     try:
                         user_id_int = int(doc.id)
                         user_data[user_id_int] = doc.to_dict()
+                        logging.info(f"Загружены данные пользователя {user_id_int} из Firestore")
                     except ValueError:
                         logging.warning(f"Пропуск невалидного user_id: {doc.id} (не число)")
-                logging.info("Загружены user_data из Firestore")
+                logging.info("Все user_data загружены из Firestore")
             except Exception as e:
-                logging.error(f"Ошибка загрузки user_data: {e}")
+                logging.error(f"Ошибка загрузки user_data из Firestore: {e}")
     except Exception as e:
-        logging.error(f"Startup ошибка: {e}", exc_info=True)
+        logging.error(f"Ошибка в lifespan (startup): {e}", exc_info=True)
     yield
     try:
         await bot.delete_webhook()
-        logging.info("Shutdown: Webhook удалён")
+        logging.info("Webhook удалён при завершении работы")
     except Exception as e:
-        logging.error(f"Shutdown ошибка: {e}", exc_info=True)
+        logging.error(f"Ошибка в lifespan (shutdown): {e}", exc_info=True)
 
 app = FastAPI(lifespan=lifespan)
 
-@app.post("/webhook")
-async def webhook(request: Request):
-    try:
-        update = await request.json()
-        update_id = update.get('update_id')
-        if update_id in processed_updates:
-            logging.warning(f"Игнорирую дубликат update_id: {update_id}")
-            return {"status": "ok"}
-        processed_updates.add(update_id)
-        logging.info(f"Webhook получил update_id: {update_id}, text={update.get('message', {}).get('text', 'no text')[:50]}...")
-        await dp.feed_update(bot, types.Update(**update))
-        logging.info(f"Обработан update_id: {update_id}")
-        return {"status": "ok"}
-    except Exception as e:
-        logging.error(f"Webhook ошибка: {e}", exc_info=True)
-        return {"status": "error"}
-
 @app.get("/health")
 async def health_check():
+    logging.info("Запрос к /health")
     try:
         info = await bot.get_webhook_info()
+        logging.info(f"Health check успешен: webhook_url={info.url}, pending_updates={info.pending_update_count}")
         return {
             "status": "ok",
             "bot_ready": True,
@@ -1083,10 +1071,28 @@ async def health_check():
             "pending_updates": info.pending_update_count
         }
     except Exception as e:
-        logging.error(f"Health check ошибка: {e}", exc_info=True)
-        return {"status": "error", "bot_ready": False}
+        logging.error(f"Ошибка в health check: {e}", exc_info=True)
+        return {"status": "error", "bot_ready": False, "error": str(e)}
+
+@app.post("/webhook")
+async def webhook(request: Request):
+    logging.info("Получен запрос к /webhook")
+    try:
+        update = await request.json()
+        update_id = update.get('update_id')
+        if update_id in processed_updates:
+            logging.warning(f"Игнорирую дубликат update_id: {update_id}")
+            return {"status": "ok"}
+        processed_updates.add(update_id)
+        logging.info(f"Обрабатываю update_id: {update_id}, text={update.get('message', {}).get('text', 'no text')[:50]}...")
+        await dp.feed_update(bot, types.Update(**update))
+        logging.info(f"Обработан update_id: {update_id}")
+        return {"status": "ok"}
+    except Exception as e:
+        logging.error(f"Ошибка в webhook: {e}", exc_info=True)
+        return {"status": "error", "error": str(e)}
 
 if __name__ == '__main__':
+    logging.info("Запуск приложения через uvicorn")
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=int(os.getenv("PORT", 8000)), workers=1)
-```
