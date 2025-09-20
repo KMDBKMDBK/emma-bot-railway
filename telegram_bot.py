@@ -1280,20 +1280,31 @@ app.lifespan = lifespan
 @app.post("/webhook/{token}")
 async def webhook(token: str, request: Request):
     """Обработчик webhook от Telegram."""
+    logging.debug(f"Получен webhook запрос: token={token}, headers={request.headers}")
     if token != TELEGRAM_TOKEN:
         logging.error("Неверный токен в webhook")
         return {"status": "error", "message": "Invalid token"}
-    update = await request.json()
-    update_id = update.get("update_id")
-    if update_id in processed_updates:
-        logging.info(f"Повторный update_id: {update_id}, пропущен")
-        return {"status": "ok"}
-    processed_updates.add(update_id)
     try:
+        body = await request.body()
+        logging.debug(f"Тело запроса: {body}")
+        if not body:
+            logging.error("Пустое тело запроса")
+            return {"status": "error", "message": "Empty request body"}
+        update = await request.json()
+        logging.debug(f"Получен update: {update}")
+        update_id = update.get("update_id")
+        if update_id in processed_updates:
+            logging.info(f"Повторный update_id: {update_id}, пропущен")
+            return {"status": "ok"}
+        processed_updates.add(update_id)
         await dp.feed_raw_update(bot, update)
+        logging.debug("Update успешно обработан")
         return {"status": "ok"}
+    except json.JSONDecodeError as e:
+        logging.error(f"Ошибка декодирования JSON: {e}")
+        return {"status": "error", "message": f"JSON decode error: {str(e)}"}
     except Exception as e:
-        logging.error(f"Ошибка обработки webhook: {e}")
+        logging.error(f"Ошибка обработки webhook: {e}", exc_info=True)
         return {"status": "error", "message": str(e)}
 
 @app.get("/health")
