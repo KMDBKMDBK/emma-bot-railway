@@ -79,7 +79,7 @@ bot = Bot(token=TELEGRAM_TOKEN)
 dp = Dispatcher()
 logging.info("Telegram бот и диспетчер инициализированы")
 
-# Хранилище для данных пользователя и обработанных update_id
+# Хранилище для данных пользователя
 user_data = {}
 processed_updates = set()
 
@@ -97,6 +97,37 @@ topic_keywords = {
     "личностный рост": ["личностный рост", "мотивация", "саморазвитие", "цели"],
     "эмоции": ["эмоции", "стресс", "депрессия", "счастье", "психология"],
     "технологии": ["технологии", "гаджеты", "ai", "искусственный интеллект"],
+}
+
+# Описание тарифов
+TARIFF_PLANS = {
+    "plan_1month": {
+        "title": "Подписка на Эмму (1 месяц)",
+        "description": "Это идеальный старт для тех, кто хочет почувствовать мою поддержку и мотивацию. Я буду с тобой каждый день, помогая делать первые шаги к твоим целям и поддерживая вдохновение.",
+        "amount": 250,
+        "duration_days": 30,
+        "payload": "emma_premium_1month",
+        "start_parameter": "pay_1month",
+        "label": "Месячная подписка"
+    },
+    "plan_3months": {
+        "title": "Подписка на Эмму (3 месяца)",
+        "description": "Отличный выбор для тех, кто хочет стабильной и длительной поддержки. Я помогу не сбиться с курса, поддержу в трудные моменты и подскажу пути для достижения новых высот.",
+        "amount": 600,
+        "duration_days": 90,
+        "payload": "emma_premium_3months",
+        "start_parameter": "pay_3months",
+        "label": "Подписка на 3 месяца"
+    },
+    "plan_12months": {
+        "title": "Подписка на Эмму (12 месяцев)",
+        "description": "Этот тариф для тех, кто готов ко всесторонней работе и планирует двигаться к мечтам длительное время. Год моей поддержки и мотивации — вместе мы достигнем всего, что задумано.",
+        "amount": 2000,
+        "duration_days": 365,
+        "payload": "emma_premium_12months",
+        "start_parameter": "pay_12months",
+        "label": "Подписка на 12 месяцев"
+    }
 }
 
 def extract_topic(content: str) -> str:
@@ -308,6 +339,50 @@ async def get_unlim_response(user_id: int, user_text: str, history: list, is_cod
                 continue
             return "Извини, что-то пошло не так. 😔 Попробуй ещё раз или спроси что-то другое! 😊"
 
+async def send_message_with_photo(chat_id: int, text: str, reply_markup: InlineKeyboardMarkup = None, user_id: int = None):
+    """Универсальная функция для отправки сообщения с фото или текстом."""
+    sent_message = None
+    try:
+        if PAY_IMAGE_PATH.startswith("http"):
+            sent_message = await bot.send_photo(
+                chat_id=chat_id,
+                photo=PAY_IMAGE_PATH,
+                caption=text,
+                parse_mode="HTML",
+                reply_markup=reply_markup
+            )
+        else:
+            if os.path.exists(PAY_IMAGE_PATH):
+                photo = types.FSInputFile(PAY_IMAGE_PATH)
+                sent_message = await bot.send_photo(
+                    chat_id=chat_id,
+                    photo=photo,
+                    caption=text,
+                    parse_mode="HTML",
+                    reply_markup=reply_markup
+                )
+        if sent_message is None:
+            sent_message = await bot.send_message(
+                chat_id=chat_id,
+                text=text,
+                parse_mode="HTML",
+                reply_markup=reply_markup
+            )
+        logging.info(f"Отправлено сообщение, message_id: {sent_message.message_id}")
+        if user_id and user_id in user_data:
+            user_data[user_id]['last_pay_message_id'] = sent_message.message_id
+            if db:
+                try:
+                    db.collection('users').document(str(user_id)).set(user_data[user_id], merge=True)
+                    logging.info(f"Сохранены user_data для {user_id} в Firestore")
+                except Exception as e:
+                    logging.error(f"Ошибка сохранения user_data: {e}")
+        return sent_message
+    except Exception as e:
+        logging.error(f"Ошибка отправки сообщения: {e}")
+        await bot.send_message(chat_id=chat_id, text="Ой, что-то пошло не так! 😔 Попробуй снова.", parse_mode="HTML")
+        return None
+
 async def send_long_message(message: types.Message, text: str, parse_mode: str, reply_markup=None):
     if not text:
         logging.warning("Попытка отправить пустое сообщение, пропущено.")
@@ -339,12 +414,15 @@ async def send_long_message(message: types.Message, text: str, parse_mode: str, 
             logging.warning("URL мини-аппки слишком длинный, кнопка не добавлена.")
     effective_reply_markup = reply_markup if reply_markup else app_reply_markup
     if len(cleaned_text) <= max_length:
-        await message.answer(cleaned_text, reply_markup=effective_reply_markup, parse_mode=parse_mode, disable_web_page_preview=True)
+        sent_message = await message.answer(cleaned_text, reply_markup=effective_reply_markup, parse_mode=parse_mode, disable_web_page_preview=True)
+        return sent_message
     else:
         parts = [cleaned_text[i:i + max_length] for i in range(0, len(cleaned_text), max_length)]
+        sent_message = None
         for i, part in enumerate(parts):
             part_reply_markup = effective_reply_markup if i == 0 else None
-            await message.answer(part, reply_markup=part_reply_markup, parse_mode=parse_mode, disable_web_page_preview=True)
+            sent_message = await message.answer(part, reply_markup=part_reply_markup, parse_mode=parse_mode, disable_web_page_preview=True)
+        return sent_message
 
 async def set_bot_commands():
     """Устанавливает меню команд бота."""
@@ -372,7 +450,9 @@ async def start(message: types.Message):
         'last_pay_message_id': None,
         'awaiting_feedback': False,
         'feedback_message_id': None,
-        'user_feedback_message_id': None
+        'user_feedback_message_id': None,
+        'request_count': 0,
+        'last_reset': datetime.now().timestamp()
     }
     start_text = (
         "<b>Привет! Меня зовут Эмма — я твой личный виртуальный компаньон и помощник. 🌟</b>\n\n"
@@ -384,7 +464,6 @@ async def start(message: types.Message):
     )
     sent_message = None
     if START_IMAGE_PATH.startswith("http"):
-        # Для облака: URL
         try:
             sent_message = await bot.send_photo(
                 chat_id=message.chat.id,
@@ -396,7 +475,6 @@ async def start(message: types.Message):
         except Exception as e:
             logging.error(f"Ошибка отправки фото для /start: {e}")
     else:
-        # Локально: FSInputFile
         if os.path.exists(START_IMAGE_PATH):
             try:
                 photo = types.FSInputFile(START_IMAGE_PATH)
@@ -433,7 +511,9 @@ async def info(message: types.Message):
             'last_pay_message_id': None,
             'awaiting_feedback': False,
             'feedback_message_id': None,
-            'user_feedback_message_id': None
+            'user_feedback_message_id': None,
+            'request_count': 0,
+            'last_reset': datetime.now().timestamp()
         }
     user_data[user_id]['awaiting_feedback'] = False
     info_text = (
@@ -476,7 +556,9 @@ async def clear_history(message: types.Message):
         'last_pay_message_id': None,
         'awaiting_feedback': False,
         'feedback_message_id': None,
-        'user_feedback_message_id': None
+        'user_feedback_message_id': None,
+        'request_count': 0,
+        'last_reset': datetime.now().timestamp()
     }
     await message.answer("История очищена! 😊 Начинаем с чистого листа.", parse_mode="HTML")
     if db:
@@ -500,58 +582,31 @@ async def pay(message: types.Message):
             'last_pay_message_id': None,
             'awaiting_feedback': False,
             'feedback_message_id': None,
-            'user_feedback_message_id': None
+            'user_feedback_message_id': None,
+            'request_count': 0,
+            'last_reset': datetime.now().timestamp()
         }
     user_data[user_id]['awaiting_feedback'] = False
     pay_text = (
         "Спасибо, что пользуешься мной — Эммой! Для всех пользователей доступен бесплатный лимит запросов, "
         "чтобы познакомиться и оценить мои возможности. 😊\n\n"
         "Когда лимит закончится, будет возможность продлить доступ с помощью подписки — "
-        "это поддержка моего развития и возможность пользоваться всеми функциями без ограничений.\n\n"
+        "это поддержка моего развития и возможность пользоваться всеми функциями!\n\n"
         "Подписка — это простой и безопасный способ помочь мне стать лучше и приносить больше пользы тебе и другим пользователям! 💖"
     )
     reply_markup = InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="Продлить доступ", callback_data="start_pay")]
+        [InlineKeyboardButton(text="🎀Продлить доступ🎀", callback_data="show_plans")]
     ])
-    sent_message = None
-    if PAY_IMAGE_PATH.startswith("http"):
-        # Для облака: URL
+    if user_data[user_id].get('last_pay_message_id'):
         try:
-            sent_message = await bot.send_photo(
+            await bot.delete_message(
                 chat_id=message.chat.id,
-                photo=PAY_IMAGE_PATH,
-                caption=pay_text,
-                parse_mode="HTML",
-                reply_markup=reply_markup
+                message_id=user_data[user_id]['last_pay_message_id']
             )
-            logging.info(f"Отправлено сообщение с фото для /pay, message_id: {sent_message.message_id}")
+            logging.info(f"Удалено предыдущее сообщение /pay для пользователя {user_id}")
         except Exception as e:
-            logging.error(f"Ошибка отправки фото для /pay: {e}")
-    else:
-        # Локально: FSInputFile
-        if os.path.exists(PAY_IMAGE_PATH):
-            try:
-                photo = types.FSInputFile(PAY_IMAGE_PATH)
-                sent_message = await bot.send_photo(
-                    chat_id=message.chat.id,
-                    photo=photo,
-                    caption=pay_text,
-                    parse_mode="HTML",
-                    reply_markup=reply_markup
-                )
-                logging.info(f"Отправлено сообщение с фото для /pay, message_id: {sent_message.message_id}")
-            except Exception as e:
-                logging.error(f"Ошибка отправки фото для /pay: {e}")
-    if sent_message is None:
-        sent_message = await message.answer(pay_text, reply_markup=reply_markup, parse_mode="HTML")
-        logging.info(f"Отправлено текстовое сообщение для /pay, message_id: {sent_message.message_id}")
-    user_data[user_id]['last_pay_message_id'] = sent_message.message_id
-    if db:
-        try:
-            db.collection('users').document(str(user_id)).set(user_data[user_id], merge=True)
-            logging.info(f"Сохранены user_data для {user_id} в Firestore")
-        except Exception as e:
-            logging.error(f"Ошибка сохранения user_data: {e}")
+            logging.error(f"Ошибка при удалении сообщения /pay: {e}")
+    await send_message_with_photo(message.chat.id, pay_text, reply_markup, user_id)
 
 @dp.message(Command("feedback"))
 async def feedback(message: types.Message):
@@ -567,7 +622,9 @@ async def feedback(message: types.Message):
             'last_pay_message_id': None,
             'awaiting_feedback': False,
             'feedback_message_id': None,
-            'user_feedback_message_id': None
+            'user_feedback_message_id': None,
+            'request_count': 0,
+            'last_reset': datetime.now().timestamp()
         }
     user_data[user_id]['awaiting_feedback'] = True
     user_data[user_id]['user_feedback_message_id'] = message.message_id
@@ -615,7 +672,9 @@ async def cancel(message: types.Message):
             'last_pay_message_id': None,
             'awaiting_feedback': False,
             'feedback_message_id': None,
-            'user_feedback_message_id': None
+            'user_feedback_message_id': None,
+            'request_count': 0,
+            'last_reset': datetime.now().timestamp()
         }
     if user_data[user_id].get('awaiting_feedback', False):
         user_data[user_id]['awaiting_feedback'] = False
@@ -657,7 +716,6 @@ async def reply(message: types.Message):
             parse_mode="HTML"
         )
         return
-
     text = message.text.strip()
     match = re.match(r'^/reply\s+(\d+)\s+(.+)$', text, re.DOTALL)
     if not match:
@@ -668,10 +726,8 @@ async def reply(message: types.Message):
             parse_mode="HTML"
         )
         return
-
     target_user_id = match.group(1)
     reply_text = match.group(2)
-
     try:
         await bot.send_message(
             chat_id=target_user_id,
@@ -691,6 +747,197 @@ async def reply(message: types.Message):
             parse_mode="HTML"
         )
 
+@dp.callback_query(lambda callback: callback.data == "show_plans")
+async def show_plans(callback: types.CallbackQuery):
+    """Обработчик для показа тарифных планов."""
+    user_id = callback.from_user.id
+    logging.info(f"Callback show_plans от пользователя {user_id}")
+    if user_id not in user_data:
+        user_data[user_id] = {
+            'history': [], 
+            'active_topic': None, 
+            'premium': False, 
+            'expiry': None, 
+            'last_pay_message_id': None,
+            'awaiting_feedback': False,
+            'feedback_message_id': None,
+            'user_feedback_message_id': None,
+            'request_count': 0,
+            'last_reset': datetime.now().timestamp()
+        }
+    plans_text = (
+        "Я предлагаю несколько тарифных планов, чтобы ты мог выбрать тот, который подходит именно тебе, по каждому тарифу лимит 50 запросов в сутки! \n\n"
+        "⦁ <b>1 месяц - 250⭐️ (~429₽)</b>\n"
+        "  Этот тариф — отличный способ начать. Ты получаешь всё необходимое для продуктивного старта. Это самый популярный вариант — Хит!\n\n"
+        "⦁ <b>3 месяца - 600⭐️ (~1008₽)</b>\n"
+        "  Выгодный тариф, который позволит тебе экономить и получать ещё больше пользы. Всего 336₽ в месяц при полном доступе к моим возможностям.\n\n"
+        "⦁ <b>12 месяцев - 2000⭐️ (~3298₽)</b>\n"
+        "  Для тех, кто действительно хочет погрузиться в процесс и получить максимальный эффект. Ты получаешь полный доступ по лучшей цене — всего 274₽ в месяц.\n\n"
+        "<i>Выбери свой план, и я буду рядом, помогая идти к мечтам шаг за шагом!</i>"
+    )
+    reply_markup = InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="🎀1 Месяц🎀", callback_data="plan_1month")],
+        [InlineKeyboardButton(text="🎀3 месяца🎀", callback_data="plan_3months")],
+        [InlineKeyboardButton(text="🎀12 месяцев🎀", callback_data="plan_12months")],
+        [InlineKeyboardButton(text="Назад", callback_data="back_to_pay")]
+    ])
+    try:
+        if user_data[user_id].get('last_pay_message_id'):
+            await bot.delete_message(
+                chat_id=callback.message.chat.id,
+                message_id=user_data[user_id]['last_pay_message_id']
+            )
+            logging.info(f"Удалено сообщение /pay для пользователя {user_id}")
+        await send_message_with_photo(callback.message.chat.id, plans_text, reply_markup, user_id)
+        await callback.answer()
+    except Exception as e:
+        logging.error(f"Ошибка при показе тарифов: {e}")
+        await callback.message.answer("Ой, что-то пошло не так! 😔 Попробуй снова.", parse_mode="HTML")
+        await callback.answer()
+
+@dp.callback_query(lambda callback: callback.data in TARIFF_PLANS)
+async def handle_tariff_plan(callback: types.CallbackQuery):
+    """Обработчик для выбора тарифа."""
+    user_id = callback.from_user.id
+    plan = TARIFF_PLANS[callback.data]
+    logging.info(f"Callback {callback.data} от пользователя {user_id}")
+    if user_id not in user_data:
+        user_data[user_id] = {
+            'history': [], 
+            'active_topic': None, 
+            'premium': False, 
+            'expiry': None, 
+            'last_pay_message_id': None,
+            'awaiting_feedback': False,
+            'feedback_message_id': None,
+            'user_feedback_message_id': None,
+            'request_count': 0,
+            'last_reset': datetime.now().timestamp()
+        }
+    reply_markup = InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="Подписаться", pay=True)],
+        [InlineKeyboardButton(text="Назад", callback_data="back_to_plans")]
+    ])
+    try:
+        if user_data[user_id].get('last_pay_message_id'):
+            await bot.delete_message(
+                chat_id=callback.message.chat.id,
+                message_id=user_data[user_id]['last_pay_message_id']
+            )
+            logging.info(f"Удалено сообщение тарифов для пользователя {user_id}")
+        await send_message_with_photo(
+            callback.message.chat.id,
+            plan["description"],
+            reply_markup,
+            user_id
+        )
+        await bot.send_invoice(
+            chat_id=callback.message.chat.id,
+            title=plan["title"],
+            description=plan["description"],
+            payload=plan["payload"],
+            provider_token="",
+            currency="XTR",
+            prices=[{"label": plan["label"], "amount": plan["amount"]}],
+            start_parameter=plan["start_parameter"],
+            reply_markup=reply_markup
+        )
+        await callback.answer()
+    except Exception as e:
+        logging.error(f"Ошибка при обработке тарифа {callback.data}: {e}")
+        await callback.message.answer("Ой, что-то пошло не так! 😔 Попробуй снова.", parse_mode="HTML")
+        await callback.answer()
+
+@dp.callback_query(lambda callback: callback.data == "back_to_plans")
+async def back_to_plans(callback: types.CallbackQuery):
+    """Обработчик для возврата к списку тарифов."""
+    user_id = callback.from_user.id
+    logging.info(f"Callback back_to_plans от пользователя {user_id}")
+    if user_id not in user_data:
+        user_data[user_id] = {
+            'history': [], 
+            'active_topic': None, 
+            'premium': False, 
+            'expiry': None, 
+            'last_pay_message_id': None,
+            'awaiting_feedback': False,
+            'feedback_message_id': None,
+            'user_feedback_message_id': None,
+            'request_count': 0,
+            'last_reset': datetime.now().timestamp()
+        }
+    plans_text = (
+        "Я предлагаю несколько тарифных планов, чтобы ты мог выбрать тот, который подходит именно тебе, по каждому тарифу лимит 50 запросов в сутки! \n\n"
+        "⦁ <b>1 месяц - 250⭐️ (~429₽)</b>\n"
+        "  Этот тариф — отличный способ начать. Ты получаешь всё необходимое для продуктивного старта. Это самый популярный вариант — Хит!\n\n"
+        "⦁ <b>3 месяца - 600⭐️ (~1008₽)</b>\n"
+        "  Выгодный тариф, который позволит тебе экономить и получать ещё больше пользы. Всего 336₽ в месяц при полном доступе к моим возможностям.\n\n"
+        "⦁ <b>12 месяцев - 2000⭐️ (~3298₽)</b>\n"
+        "  Для тех, кто действительно хочет погрузиться в процесс и получить максимальный эффект. Ты получаешь полный доступ по лучшей цене — всего 274₽ в месяц.\n\n"
+        "<i>Выбери свой план, и я буду рядом, помогая идти к мечтам шаг за шагом!</i>"
+    )
+    reply_markup = InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="🎀1 Месяц🎀", callback_data="plan_1month")],
+        [InlineKeyboardButton(text="🎀3 месяца🎀", callback_data="plan_3months")],
+        [InlineKeyboardButton(text="🎀12 месяцев🎀", callback_data="plan_12months")],
+        [InlineKeyboardButton(text="Назад", callback_data="back_to_pay")]
+    ])
+    try:
+        if user_data[user_id].get('last_pay_message_id'):
+            await bot.delete_message(
+                chat_id=callback.message.chat.id,
+                message_id=user_data[user_id]['last_pay_message_id']
+            )
+            logging.info(f"Удалено сообщение тарифа для пользователя {user_id}")
+        await send_message_with_photo(callback.message.chat.id, plans_text, reply_markup, user_id)
+        await callback.answer()
+    except Exception as e:
+        logging.error(f"Ошибка при возврате к тарифам: {e}")
+        await callback.message.answer("Ой, что-то пошло не так! 😔 Попробуй снова.", parse_mode="HTML")
+        await callback.answer()
+
+@dp.callback_query(lambda callback: callback.data == "back_to_pay")
+async def back_to_pay(callback: types.CallbackQuery):
+    """Обработчик для возврата к начальному сообщению /pay."""
+    user_id = callback.from_user.id
+    logging.info(f"Callback back_to_pay от пользователя {user_id}")
+    if user_id not in user_data:
+        user_data[user_id] = {
+            'history': [], 
+            'active_topic': None, 
+            'premium': False, 
+            'expiry': None, 
+            'last_pay_message_id': None,
+            'awaiting_feedback': False,
+            'feedback_message_id': None,
+            'user_feedback_message_id': None,
+            'request_count': 0,
+            'last_reset': datetime.now().timestamp()
+        }
+    pay_text = (
+        "Спасибо, что пользуешься мной — Эммой! Для всех пользователей доступен бесплатный лимит запросов, "
+        "чтобы познакомиться и оценить мои возможности. 😊\n\n"
+        "Когда лимит закончится, будет возможность продлить доступ с помощью подписки — "
+        "это поддержка моего развития и возможность пользоваться всеми функциями!\n\n"
+        "Подписка — это простой и безопасный способ помочь мне стать лучше и приносить больше пользы тебе и другим пользователям! 💖"
+    )
+    reply_markup = InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="🎀Продлить доступ🎀", callback_data="show_plans")]
+    ])
+    try:
+        if user_data[user_id].get('last_pay_message_id'):
+            await bot.delete_message(
+                chat_id=callback.message.chat.id,
+                message_id=user_data[user_id]['last_pay_message_id']
+            )
+            logging.info(f"Удалено сообщение тарифов для пользователя {user_id}")
+        await send_message_with_photo(callback.message.chat.id, pay_text, reply_markup, user_id)
+        await callback.answer()
+    except Exception as e:
+        logging.error(f"Ошибка при возврате к /pay: {e}")
+        await callback.message.answer("Ой, что-то пошло не так! 😔 Попробуй снова.", parse_mode="HTML")
+        await callback.answer()
+
 @dp.callback_query(lambda callback: callback.data == "cancel_feedback")
 async def cancel_feedback_callback(callback: types.CallbackQuery):
     """Обработчик нажатия кнопки 'Назад' для отмены /feedback."""
@@ -705,7 +952,9 @@ async def cancel_feedback_callback(callback: types.CallbackQuery):
             'last_pay_message_id': None,
             'awaiting_feedback': False,
             'feedback_message_id': None,
-            'user_feedback_message_id': None
+            'user_feedback_message_id': None,
+            'request_count': 0,
+            'last_reset': datetime.now().timestamp()
         }
     if user_data[user_id].get('awaiting_feedback', False):
         user_data[user_id]['awaiting_feedback'] = False
@@ -747,52 +996,6 @@ async def cancel_feedback_callback(callback: types.CallbackQuery):
         except Exception as e:
             logging.error(f"Ошибка сохранения user_data: {e}")
 
-@dp.callback_query(lambda callback: callback.data == "start_pay")
-async def start_pay_callback(callback: types.CallbackQuery):
-    """Обработчик callback для оплаты."""
-    user_id = callback.from_user.id
-    logging.info(f"Callback start_pay от пользователя {user_id}")
-    pay_text = (
-        "Спасибо, что используете Эмму! Эта подписка продлевает ваш доступ к боту без ограничений, "
-        "помогает развитию проекта и поддерживает улучшение функционала. Мы ценим вашу поддержку и доверие!"
-    )
-    try:
-        last_pay_message_id = user_data.get(user_id, {}).get('last_pay_message_id')
-        if last_pay_message_id:
-            await bot.delete_message(
-                chat_id=callback.message.chat.id,
-                message_id=last_pay_message_id
-            )
-            logging.info(f"Удалено сообщение {last_pay_message_id} для пользователя {user_id}")
-        
-        await bot.send_invoice(
-            chat_id=callback.message.chat.id,
-            title="Подписка на Эмму",
-            description=pay_text,
-            payload="emma_premium_monthly_001",
-            provider_token="",
-            currency="XTR",
-            prices=[{"label": "Месячная подписка", "amount": 250}],
-            start_parameter="pay",
-            reply_markup=InlineKeyboardMarkup(inline_keyboard=[
-                [InlineKeyboardButton(text="Подписаться на Эмму", pay=True)]
-            ])
-        )
-        await callback.answer()
-    except Exception as e:
-        logging.error(f"Ошибка отправки инвойса или удаления сообщения: {e}")
-        await callback.message.answer(
-            "Что-то пошло не так при открытии оплаты. 😔 Попробуй ещё раз!",
-            parse_mode="HTML"
-        )
-        await callback.answer()
-    if db:
-        try:
-            db.collection('users').document(str(user_id)).set(user_data[user_id], merge=True)
-            logging.info(f"Сохранены user_data для {user_id} в Firestore")
-        except Exception as e:
-            logging.error(f"Ошибка сохранения user_data: {e}")
-
 @dp.pre_checkout_query()
 async def process_pre_checkout_query(pre_checkout_query: types.PreCheckoutQuery):
     """Обработчик pre-checkout query для оплаты."""
@@ -812,26 +1015,70 @@ async def process_successful_payment(message: types.Message):
     user_id = message.from_user.id
     payload = message.successful_payment.invoice_payload
     logging.info(f"Успешный платёж от пользователя {user_id}: {payload}")
-    if payload == "emma_premium_monthly_001":
-        expiry_date = datetime.now() + timedelta(days=30)
-        user_data[user_id]['premium'] = True
-        user_data[user_id]['expiry'] = expiry_date.timestamp()
-        if db:
-            try:
-                doc_ref = db.collection('users').document(str(user_id))
-                doc_ref.set({
-                    'premium': True,
-                    'expiry': expiry_date,
-                    'timestamp': firestore.SERVER_TIMESTAMP
-                }, merge=True)
-                logging.info(f"Premium-статус сохранён в Firestore для пользователя {user_id}")
-            except Exception as e:
-                logging.error(f"Ошибка сохранения premium-статуса в Firestore: {e}")
-        await message.answer(
-            "Спасибо за поддержку, ты теперь премиум-пользователь! 🎉 "
-            f"Подписка активна до {expiry_date.strftime('%Y-%m-%d')}. Наслаждайся всеми функциями без ограничений! 😊✨",
-            parse_mode="HTML"
-        )
+    if user_id not in user_data:
+        user_data[user_id] = {
+            'history': [], 
+            'active_topic': None, 
+            'premium': False, 
+            'expiry': None, 
+            'last_pay_message_id': None,
+            'awaiting_feedback': False,
+            'feedback_message_id': None,
+            'user_feedback_message_id': None,
+            'request_count': 0,
+            'last_reset': datetime.now().timestamp()
+        }
+    for plan_key, plan in TARIFF_PLANS.items():
+        if payload == plan["payload"]:
+            expiry_date = datetime.now() + timedelta(days=plan["duration_days"])
+            amount = plan["amount"]
+            duration = plan["label"]
+            break
+    else:
+        logging.error(f"Неизвестный payload: {payload}")
+        await message.answer("Ошибка при обработке платежа. 😔 Свяжитесь с поддержкой.", parse_mode="HTML")
+        return
+    user_data[user_id]['premium'] = True
+    user_data[user_id]['expiry'] = expiry_date.timestamp()
+    if db:
+        try:
+            doc_ref = db.collection('users').document(str(user_id))
+            doc_ref.set({
+                'premium': True,
+                'expiry': expiry_date,
+                'timestamp': firestore.SERVER_TIMESTAMP
+            }, merge=True)
+            logging.info(f"Premium-статус сохранён в Firestore для пользователя {user_id}")
+            db.collection('payments').document(f"{user_id}_{int(time.time())}").set({
+                'user_id': user_id,
+                'amount': amount,
+                'duration': duration,
+                'timestamp': firestore.SERVER_TIMESTAMP
+            })
+            logging.info(f"Платёж сохранён в Firestore для пользователя {user_id}")
+        except Exception as e:
+            logging.error(f"Ошибка сохранения premium-статуса или платежа в Firestore: {e}")
+    try:
+        if user_data[user_id].get('last_pay_message_id'):
+            await bot.delete_message(
+                chat_id=message.chat.id,
+                message_id=user_data[user_id]['last_pay_message_id']
+            )
+            logging.info(f"Удалено сообщение тарифа для пользователя {user_id}")
+            user_data[user_id]['last_pay_message_id'] = None
+    except Exception as e:
+        logging.error(f"Ошибка при удалении сообщения тарифа: {e}")
+    await message.answer(
+        f"Спасибо за поддержку, ты теперь премиум-пользователь! 🎉 "
+        f"Подписка на {duration} активна до {expiry_date.strftime('%Y-%m-%d')}. Наслаждайся всеми функциями! 😊✨",
+        parse_mode="HTML"
+    )
+    if db:
+        try:
+            db.collection('users').document(str(user_id)).set(user_data[user_id], merge=True)
+            logging.info(f"Сохранены user_data для {user_id} в Firestore")
+        except Exception as e:
+            logging.error(f"Ошибка сохранения user_data: {e}")
 
 @dp.message()
 async def handle_message(message: types.Message):
@@ -857,9 +1104,29 @@ async def handle_message(message: types.Message):
             'last_pay_message_id': None,
             'awaiting_feedback': False,
             'feedback_message_id': None,
-            'user_feedback_message_id': None
+            'user_feedback_message_id': None,
+            'request_count': 0,
+            'last_reset': datetime.now().timestamp()
         }
     
+    # Проверка лимита запросов
+    current_time = datetime.now().timestamp()
+    last_reset = user_data[user_id].get('last_reset', current_time)
+    if current_time - last_reset >= 24 * 3600:  # Сброс каждые 24 часа
+        user_data[user_id]['request_count'] = 0
+        user_data[user_id]['last_reset'] = current_time
+        logging.info(f"Сброс счётчика запросов для пользователя {user_id}")
+    if user_data[user_id]['request_count'] >= 50:
+        logging.info(f"Пользователь {user_id} превысил лимит 50 запросов в сутки")
+        await message.answer(
+            "Лимит запросов (50 в сутки) исчерпан. Оформите подписку с помощью /pay! 😊",
+            parse_mode="HTML"
+        )
+        return
+    user_data[user_id]['request_count'] += 1
+    logging.info(f"Пользователь {user_id}: запрос {user_data[user_id]['request_count']}/50")
+    
+    # Обработка обратной связи
     if user_data[user_id].get('awaiting_feedback', False):
         if not FEEDBACK_CHAT_ID:
             logging.error("FEEDBACK_CHAT_ID не указан в .env")
@@ -875,11 +1142,10 @@ async def handle_message(message: types.Message):
                     logging.error(f"Ошибка сохранения user_data: {e}")
             return
         
-        username = message.from_user.username or "Аноним"
+        username = message.from_user.username or message.from_user.first_name or "Аноним"
         feedback_text = (
-            f"<b>Обратная связь от @{username} (ID: {user_id})</b>\n"
-            f"Сообщение: {user_text}\n\n"
-            f"Чтобы ответить, используйте: <b>/reply {user_id} Ваш ответ</b>"
+            f"<b>Обратная связь от пользователя</b> (ID: {user_id}, @{username}):\n"
+            f"{user_text}"
         )
         try:
             await bot.send_message(
@@ -887,212 +1153,156 @@ async def handle_message(message: types.Message):
                 text=feedback_text,
                 parse_mode="HTML"
             )
-            logging.info(f"Сообщение обратной связи от {user_id} переслано в чат {FEEDBACK_CHAT_ID}")
-            try:
-                if user_data[user_id].get('feedback_message_id'):
+            logging.info(f"Отправлена обратная связь от {user_id} в чат {FEEDBACK_CHAT_ID}")
+            await message.answer(
+                "Спасибо за твою обратную связь! 😊 Она очень важна для меня. Команда скоро её рассмотрит!",
+                parse_mode="HTML"
+            )
+            if user_data[user_id].get('feedback_message_id'):
+                try:
                     await bot.delete_message(
                         chat_id=message.chat.id,
                         message_id=user_data[user_id]['feedback_message_id']
                     )
                     logging.info(f"Удалено сообщение /feedback для пользователя {user_id}")
-                if user_data[user_id].get('user_feedback_message_id'):
+                except Exception as e:
+                    logging.error(f"Ошибка при удалении сообщения /feedback: {e}")
+            if user_data[user_id].get('user_feedback_message_id'):
+                try:
                     await bot.delete_message(
                         chat_id=message.chat.id,
                         message_id=user_data[user_id]['user_feedback_message_id']
                     )
                     logging.info(f"Удалено сообщение пользователя /feedback для {user_id}")
+                except Exception as e:
+                    logging.error(f"Ошибка при удалении сообщения пользователя /feedback: {e}")
+            user_data[user_id]['awaiting_feedback'] = False
+            user_data[user_id]['feedback_message_id'] = None
+            user_data[user_id]['user_feedback_message_id'] = None
+        except Exception as e:
+            logging.error(f"Ошибка при отправке обратной связи в чат {FEEDBACK_CHAT_ID}: {e}")
+            await message.answer(
+                "Ой, не удалось отправить обратную связь. 😔 Попробуй ещё раз или напиши позже!",
+                parse_mode="HTML"
+            )
+            user_data[user_id]['awaiting_feedback'] = False
+            user_data[user_id]['feedback_message_id'] = None
+            user_data[user_id]['user_feedback_message_id'] = None
+        if db:
+            try:
+                db.collection('users').document(str(user_id)).set(user_data[user_id], merge=True)
+                logging.info(f"Сохранены user_data для {user_id} в Firestore")
             except Exception as e:
-                logging.error(f"Ошибка при удалении сообщений /feedback: {e}")
-            await message.answer(
-                "<b>Спасибо большое за твоё сообщение!</b> 🙌\n\n"
-                "Я внимательно прочитаю твою обратную связь и передам её команде разработчиков. "
-                "Каждый твой отзыв помогает делать «Эмму» умнее, добрее и полезнее для всех пользователей.\n\n"
-                "Если появятся дополнительные вопросы или пожелания, не стесняйся писать — "
-                "я всегда рядом, чтобы слушать и помогать.\n\n"
-                "<b>Спасибо, что ты со мной!</b> 💫",
-                parse_mode="HTML"
-            )
-            user_data[user_id]['awaiting_feedback'] = False
-            user_data[user_id]['feedback_message_id'] = None
-            user_data[user_id]['user_feedback_message_id'] = None
-            if db:
-                try:
-                    db.collection('users').document(str(user_id)).set(user_data[user_id], merge=True)
-                    logging.info(f"Сохранены user_data для {user_id} в Firestore")
-                except Exception as e:
-                    logging.error(f"Ошибка сохранения user_data: {e}")
-            return
-        except Exception as e:
-            logging.error(f"Ошибка при пересылке сообщения в {FEEDBACK_CHAT_ID}: {e}")
-            await message.answer(
-                "Ой, что-то пошло не так при отправке! 😔 Попробуй ещё раз.",
-                parse_mode="HTML"
-            )
-            user_data[user_id]['awaiting_feedback'] = False
-            user_data[user_id]['feedback_message_id'] = None
-            user_data[user_id]['user_feedback_message_id'] = None
-            if db:
-                try:
-                    db.collection('users').document(str(user_id)).set(user_data[user_id], merge=True)
-                    logging.info(f"Сохранены user_data для {user_id} в Firestore")
-                except Exception as e:
-                    logging.error(f"Ошибка сохранения user_data: {e}")
-            return
-    
-    history = user_data[user_id]['history']
-    active_topic = user_data[user_id]['active_topic']
-    is_code_request = any(keyword in user_text.lower() for keyword in [
-        "напиши код", "программа", "код на", "python", "javascript",
-        "напиши программу", "код на питоне", "код калькулятора"
-    ])
-    history.append({"role": "user", "content": user_text})
-    search_data = None
-    if not is_code_request:
-        is_clarification = any(keyword in user_text.lower() for keyword in clarification_keywords)
-        if is_clarification:
-            search_query = active_topic if active_topic else user_text
-            search_data = await get_google_cse_info(search_query, active_topic)
-            if search_data and not is_relevant(search_data, user_text, active_topic):
-                logging.info(f"Поиск нерелевантен для '{user_text}', fallback на контекст.")
-                search_data = None
-        else:
-            search_data = await get_google_cse_info(user_text)
-            if search_data and not is_relevant(search_data, user_text):
-                logging.info(f"Поиск нерелевантен для '{user_text}', fallback на контекст.")
-                search_data = None
-        if search_data:
-            logging.info(f"Агрегировано {len(search_data)} источников")
-        if isinstance(search_data, str):
-            response = search_data
-            await send_long_message(message, response, parse_mode="HTML")
-        else:
-            response = await get_unlim_response(user_id, user_text, history, is_code_request, search_data, use_html=True)
-            await send_long_message(message, response, parse_mode="HTML")
-    else:
-        response = await get_unlim_response(user_id, user_text, history, is_code_request)
-        await send_long_message(message, response, parse_mode="HTML")
-    history.append({"role": "assistant", "content": response})
-    user_data[user_id]['history'] = history[-20:]
-    user_data[user_id]['active_topic'] = extract_topic(response)
-    logging.info(f"Обновлённая история для пользователя {user_id}: {user_data[user_id]['history']}")
-    logging.info(f"Активная тема для пользователя {user_id}: {user_data[user_id]['active_topic']}")
-    if db:
-        try:
-            db.collection('users').document(str(user_id)).set(user_data[user_id], merge=True)
-            logging.info(f"Сохранены user_data для {user_id} в Firestore")
-        except Exception as e:
-            logging.error(f"Ошибка сохранения user_data: {e}")
-    logging.info(f"Завершена обработка update для user {user_id}")
-
-@dp.callback_query()
-async def handle_callback(callback: types.CallbackQuery):
-    """Обработчик всех callback-запросов."""
-    user_id = callback.from_user.id
-    action = callback.data
-    logging.info(f"Пользователь {user_id}: Нажата кнопка: {action}")
-    await callback.message.bot.send_chat_action(chat_id=callback.message.chat.id, action="typing")
-    await asyncio.sleep(0.5)
-    
-    if action == "cancel_feedback":
-        await cancel_feedback_callback(callback)
+                logging.error(f"Ошибка сохранения user_data: {e}")
         return
     
-    if user_id not in user_data:
-        user_data[user_id] = {
-            'history': [], 
-            'active_topic': None, 
-            'premium': False, 
-            'expiry': None, 
-            'last_pay_message_id': None,
-            'awaiting_feedback': False,
-            'feedback_message_id': None,
-            'user_feedback_message_id': None
-        }
+    # Проверка статуса подписки
+    if user_data[user_id].get('premium', False):
+        expiry = user_data[user_id].get('expiry')
+        if expiry and datetime.now().timestamp() > expiry:
+            user_data[user_id]['premium'] = False
+            user_data[user_id]['expiry'] = None
+            logging.info(f"Подписка пользователя {user_id} истекла")
+            if db:
+                try:
+                    db.collection('users').document(str(user_id)).set({
+                        'premium': False,
+                        'expiry': None,
+                        'timestamp': firestore.SERVER_TIMESTAMP
+                    }, merge=True)
+                    logging.info(f"Сохранён статус подписки для {user_id} в Firestore")
+                except Exception as e:
+                    logging.error(f"Ошибка сохранения статуса подписки: {e}")
+    
+    # Обработка обычного сообщения
     history = user_data[user_id]['history']
-    active_topic = user_data[user_id]['active_topic']
-    response = await get_unlim_response(user_id, action, history, is_code_request=False, use_html=True)
-    await send_long_message(callback.message, response, parse_mode="HTML")
+    is_code_request = any(keyword in user_text.lower() for keyword in ["код ", "программ", "коди", "python", "javascript", "html", "css"])
+    active_topic = user_data[user_id].get('active_topic')
+    
+    search_data = None
+    if GOOGLE_API_KEY and GOOGLE_CSE_ID and not is_code_request:
+        search_data = await get_google_cse_info(user_text, active_topic)
+        if search_data and is_relevant(search_data, user_text, active_topic):
+            logging.info(f"Найдены релевантные результаты поиска для запроса: {user_text}")
+        else:
+            search_data = None
+            logging.info(f"Результаты поиска не релевантны или отсутствуют для запроса: {user_text}")
+    
+    response = await get_unlim_response(
+        user_id=user_id,
+        user_text=user_text,
+        history=history,
+        is_code_request=is_code_request,
+        search_data=search_data,
+        use_html=True
+    )
+    
+    new_topic = extract_topic(response) if response else active_topic
+    user_data[user_id]['active_topic'] = new_topic
+    logging.info(f"Обновлена активная тема для пользователя {user_id}: {new_topic}")
+    
+    history.append({"role": "user", "content": user_text})
     history.append({"role": "assistant", "content": response})
-    user_data[user_id]['history'] = history[-20:]
-    user_data[user_id]['active_topic'] = extract_topic(response)
-    await callback.answer()
+    user_data[user_id]['history'] = history[-20:]  # Ограничение на 20 сообщений
+    
     if db:
         try:
             db.collection('users').document(str(user_id)).set(user_data[user_id], merge=True)
             logging.info(f"Сохранены user_data для {user_id} в Firestore")
         except Exception as e:
             logging.error(f"Ошибка сохранения user_data: {e}")
+    
+    await send_long_message(message, response, parse_mode="HTML")
+
+# FastAPI для обработки webhook
+app = FastAPI()
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    logging.info("Запуск lifespan: настройка webhook и загрузка данных")
-    try:
-        render_url = os.getenv('RENDER_URL', 'emma-bot-render.onrender.com')
-        webhook_url = f"https://{render_url}/webhook"
-        logging.info(f"Установка webhook на {webhook_url}")
+    """Контекстный менеджер для запуска и остановки бота."""
+    logging.info("Запуск бота...")
+    await set_bot_commands()
+    if os.getenv("RENDER_URL"):
+        webhook_url = f"{os.getenv('RENDER_URL')}/webhook/{TELEGRAM_TOKEN}"
+        logging.info(f"Установка webhook: {webhook_url}")
         await bot.set_webhook(webhook_url)
-        info = await bot.get_webhook_info()
-        logging.info(f"Webhook установлен: url={info.url}, pending_updates={info.pending_update_count}")
-        await set_bot_commands()
-        if db:
-            try:
-                docs = db.collection('users').stream()
-                for doc in docs:
-                    try:
-                        user_id_int = int(doc.id)
-                        user_data[user_id_int] = doc.to_dict()
-                        logging.info(f"Загружены данные пользователя {user_id_int} из Firestore")
-                    except ValueError:
-                        logging.warning(f"Пропуск невалидного user_id: {doc.id} (не число)")
-                logging.info("Все user_data загружены из Firestore")
-            except Exception as e:
-                logging.error(f"Ошибка загрузки user_data из Firestore: {e}")
-    except Exception as e:
-        logging.error(f"Ошибка в lifespan (startup): {e}", exc_info=True)
-    yield
-    try:
+    else:
+        logging.info("Удаление webhook для локального запуска")
         await bot.delete_webhook()
-        logging.info("Webhook удалён при завершении работы")
-    except Exception as e:
-        logging.error(f"Ошибка в lifespan (shutdown): {e}", exc_info=True)
+        asyncio.create_task(dp.start_polling(bot))
+    yield
+    logging.info("Остановка бота...")
+    await bot.delete_webhook()
+    await bot.session.close()
 
-app = FastAPI(lifespan=lifespan)
+app.lifespan = lifespan
+
+@app.post("/webhook/{token}")
+async def webhook(token: str, request: Request):
+    """Обработчик webhook от Telegram."""
+    if token != TELEGRAM_TOKEN:
+        logging.error("Неверный токен в webhook")
+        return {"status": "error", "message": "Invalid token"}
+    update = await request.json()
+    update_id = update.get("update_id")
+    if update_id in processed_updates:
+        logging.info(f"Повторный update_id: {update_id}, пропущен")
+        return {"status": "ok"}
+    processed_updates.add(update_id)
+    try:
+        await dp.feed_raw_update(bot, update)
+        return {"status": "ok"}
+    except Exception as e:
+        logging.error(f"Ошибка обработки webhook: {e}")
+        return {"status": "error", "message": str(e)}
 
 @app.get("/health")
 async def health_check():
-    logging.info("Запрос к /health")
-    try:
-        info = await bot.get_webhook_info()
-        logging.info(f"Health check успешен: webhook_url={info.url}, pending_updates={info.pending_update_count}")
-        return {
-            "status": "ok",
-            "bot_ready": True,
-            "webhook_url": info.url,
-            "pending_updates": info.pending_update_count
-        }
-    except Exception as e:
-        logging.error(f"Ошибка в health check: {e}", exc_info=True)
-        return {"status": "error", "bot_ready": False, "error": str(e)}
+    """Проверка состояния сервиса."""
+    logging.info("Health check запрос получен")
+    return {"status": "healthy"}
 
-@app.post("/webhook")
-async def webhook(request: Request):
-    logging.info("Получен запрос к /webhook")
-    try:
-        update = await request.json()
-        update_id = update.get('update_id')
-        if update_id in processed_updates:
-            logging.warning(f"Игнорирую дубликат update_id: {update_id}")
-            return {"status": "ok"}
-        processed_updates.add(update_id)
-        logging.info(f"Обрабатываю update_id: {update_id}, text={update.get('message', {}).get('text', 'no text')[:50]}...")
-        await dp.feed_update(bot, types.Update(**update))
-        logging.info(f"Обработан update_id: {update_id}")
-        return {"status": "ok"}
-    except Exception as e:
-        logging.error(f"Ошибка в webhook: {e}", exc_info=True)
-        return {"status": "error", "error": str(e)}
-
-if __name__ == '__main__':
-    logging.info("Запуск приложения через uvicorn")
+if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=int(os.getenv("PORT", 8000)), workers=1)
+    logging.info("Запуск FastAPI сервера...")
+    uvicorn.run(app, host="0.0.0.0", port=int(os.getenv("PORT", 8000)))
