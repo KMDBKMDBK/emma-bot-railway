@@ -1,3 +1,4 @@
+```python
 import logging
 import asyncio
 import os
@@ -74,9 +75,6 @@ client = AsyncOpenAI(
 # Инициализация бота
 bot = Bot(token=TELEGRAM_TOKEN)
 dp = Dispatcher()
-
-# Инициализация FastAPI
-app = FastAPI()
 
 # Хранилище для данных пользователя и обработанных update_id
 user_data = {}
@@ -1022,23 +1020,6 @@ async def handle_callback(callback: types.CallbackQuery):
         except Exception as e:
             logging.error(f"Ошибка сохранения user_data: {e}")
 
-@app.post("/webhook")
-async def webhook(request: Request):
-    try:
-        update = await request.json()
-        update_id = update.get('update_id')
-        if update_id in processed_updates:
-            logging.warning(f"Игнорирую дубликат update_id: {update_id}")
-            return {"status": "ok"}
-        processed_updates.add(update_id)
-        logging.info(f"Webhook получил update_id: {update_id}, text={update.get('message', {}).get('text', 'no text')[:50]}...")
-        await dp.feed_update(bot, types.Update(**update))
-        logging.info(f"Обработан update_id: {update_id}")
-        return {"status": "ok"}
-    except Exception as e:
-        logging.error(f"Webhook ошибка: {e}", exc_info=True)
-        return {"status": "error"}
-
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     try:
@@ -1073,6 +1054,39 @@ async def lifespan(app: FastAPI):
         logging.error(f"Shutdown ошибка: {e}", exc_info=True)
 
 app = FastAPI(lifespan=lifespan)
+
+@app.post("/webhook")
+async def webhook(request: Request):
+    try:
+        update = await request.json()
+        update_id = update.get('update_id')
+        if update_id in processed_updates:
+            logging.warning(f"Игнорирую дубликат update_id: {update_id}")
+            return {"status": "ok"}
+        processed_updates.add(update_id)
+        logging.info(f"Webhook получил update_id: {update_id}, text={update.get('message', {}).get('text', 'no text')[:50]}...")
+        await dp.feed_update(bot, types.Update(**update))
+        logging.info(f"Обработан update_id: {update_id}")
+        return {"status": "ok"}
+    except Exception as e:
+        logging.error(f"Webhook ошибка: {e}", exc_info=True)
+        return {"status": "error"}
+
+@app.get("/health")
+async def health_check():
+    try:
+        info = await bot.get_webhook_info()
+        return {
+            "status": "ok",
+            "bot_ready": True,
+            "webhook_url": info.url,
+            "pending_updates": info.pending_update_count
+        }
+    except Exception as e:
+        logging.error(f"Health check ошибка: {e}", exc_info=True)
+        return {"status": "error", "bot_ready": False}
+
 if __name__ == '__main__':
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=int(os.getenv("PORT", 8000)), workers=1)
+```
