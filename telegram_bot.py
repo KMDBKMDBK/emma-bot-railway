@@ -507,11 +507,11 @@ async def pay(message: types.Message):
         "Спасибо, что пользуешься мной — Эммой! Для всех пользователей доступен бесплатный лимит запросов, "
         "чтобы познакомиться и оценить мои возможности. 😊\n\n"
         "Когда лимит закончится, будет возможность продлить доступ с помощью подписки — "
-        "это поддержка моего развития и возможность пользоваться всеми функциями без ограничений.\n\n"
+        "это поддержка моего развития и возможность пользоваться всеми функциями!\n\n"
         "Подписка — это простой и безопасный способ помочь мне стать лучше и приносить больше пользы тебе и другим пользователям! 💖"
     )
     reply_markup = InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="Продлить доступ", callback_data="start_pay")]
+        [InlineKeyboardButton(text="🎀Продлить доступ🎀", callback_data="show_plans")]
     ])
     sent_message = None
     if PAY_IMAGE_PATH.startswith("http"):
@@ -691,6 +691,224 @@ async def reply(message: types.Message):
             parse_mode="HTML"
         )
 
+@dp.callback_query(lambda callback: callback.data in ["show_plans", "plan_1month", "plan_3months", "plan_12months", "back_to_plans"])
+async def handle_subscription_callback(callback: types.CallbackQuery):
+    """Обработчик callback для выбора тарифных планов."""
+    user_id = callback.from_user.id
+    action = callback.data
+    logging.info(f"Callback {action} от пользователя {user_id}")
+
+    if user_id not in user_data:
+        user_data[user_id] = {
+            'history': [], 
+            'active_topic': None, 
+            'premium': False, 
+            'expiry': None, 
+            'last_pay_message_id': None,
+            'awaiting_feedback': False,
+            'feedback_message_id': None,
+            'user_feedback_message_id': None
+        }
+
+    # Удаление предыдущего сообщения
+    last_pay_message_id = user_data.get(user_id, {}).get('last_pay_message_id')
+    if last_pay_message_id:
+        try:
+            await bot.delete_message(
+                chat_id=callback.message.chat.id,
+                message_id=last_pay_message_id
+            )
+            logging.info(f"Удалено сообщение {last_pay_message_id} для пользователя {user_id}")
+        except Exception as e:
+            logging.error(f"Ошибка при удалении сообщения {last_pay_message_id}: {e}")
+
+    if action == "show_plans":
+        plans_text = (
+            "<b>Я предлагаю несколько тарифных планов, чтобы ты мог выбрать тот, который подходит именно тебе!</b> 😊\n\n"
+            "По каждому тарифу ты получишь <b>50 запросов в сутки</b> для общения со мной! 💬\n\n"
+            "⦁ <b>1 месяц — 250⭐️ (~429₽)</b>\n"
+            "  Этот тариф — отличный способ начать. Ты получаешь всё необходимое для продуктивного старта. Это самый популярный вариант — Хит!\n\n"
+            "⦁ <b>3 месяца — 600⭐️ (~1008₽)</b>\n"
+            "  Выгодный тариф, который позволит тебе экономить и получать ещё больше пользы. Всего 336₽ в месяц при полном доступе к моим возможностям.\n\n"
+            "⦁ <b>12 месяцев — 2000⭐️ (~3298₽)</b>\n"
+            "  Для тех, кто действительно хочет погрузиться в процесс и получить максимальный эффект. Ты получаешь полный доступ по лучшей цене — всего 274₽ в месяц.\n\n"
+            "<i>Выбери свой план, и я буду рядом, помогая идти к мечтам шаг за шагом!</i> ✨"
+        )
+        reply_markup = InlineKeyboardMarkup(inline_keyboard=[
+            [InlineKeyboardButton(text="🎀1 Месяц🎀", callback_data="plan_1month")],
+            [InlineKeyboardButton(text="🎀3 месяца🎀", callback_data="plan_3months")],
+            [InlineKeyboardButton(text="🎀12 месяцев🎀", callback_data="plan_12months")]
+        ])
+        sent_message = None
+        if PAY_IMAGE_PATH.startswith("http"):
+            try:
+                sent_message = await bot.send_photo(
+                    chat_id=callback.message.chat.id,
+                    photo=PAY_IMAGE_PATH,
+                    caption=plans_text,
+                    parse_mode="HTML",
+                    reply_markup=reply_markup
+                )
+                logging.info(f"Отправлено сообщение с тарифами, message_id: {sent_message.message_id}")
+            except Exception as e:
+                logging.error(f"Ошибка отправки фото для тарифов: {e}")
+        else:
+            if os.path.exists(PAY_IMAGE_PATH):
+                try:
+                    photo = types.FSInputFile(PAY_IMAGE_PATH)
+                    sent_message = await bot.send_photo(
+                        chat_id=callback.message.chat.id,
+                        photo=photo,
+                        caption=plans_text,
+                        parse_mode="HTML",
+                        reply_markup=reply_markup
+                    )
+                    logging.info(f"Отправлено сообщение с тарифами, message_id: {sent_message.message_id}")
+                except Exception as e:
+                    logging.error(f"Ошибка отправки фото для тарифов: {e}")
+        if sent_message is None:
+            sent_message = await callback.message.answer(plans_text, reply_markup=reply_markup, parse_mode="HTML")
+            logging.info(f"Отправлено текстовое сообщение с тарифами, message_id: {sent_message.message_id}")
+        user_data[user_id]['last_pay_message_id'] = sent_message.message_id
+
+    elif action == "plan_1month":
+        plan_text = (
+            "<b>1 месяц — 250⭐️ (~429₽)</b>\n\n"
+            "Это идеальный старт для тех, кто хочет почувствовать мою поддержку и мотивацию. "
+            "Я буду с тобой каждый день, помогая делать первые шаги к твоим целям и поддерживая вдохновение! 😊✨"
+        )
+        reply_markup = InlineKeyboardMarkup(inline_keyboard=[
+            [InlineKeyboardButton(text="Подписаться на 1 месяц", pay=True)],
+            [InlineKeyboardButton(text="Назад", callback_data="back_to_plans")]
+        ])
+        try:
+            sent_message = await bot.send_invoice(
+                chat_id=callback.message.chat.id,
+                title="Подписка на Эмму — 1 месяц",
+                description=plan_text,
+                payload="emma_premium_1month",
+                provider_token="",
+                currency="XTR",
+                prices=[{"label": "Месячная подписка", "amount": 250}],
+                reply_markup=reply_markup
+            )
+            user_data[user_id]['last_pay_message_id'] = sent_message.message_id
+            logging.info(f"Отправлен инвойс для 1 месяца, message_id: {sent_message.message_id}")
+        except Exception as e:
+            logging.error(f"Ошибка отправки инвойса для 1 месяца: {e}")
+            await callback.message.answer("Что-то пошло не так при открытии оплаты. 😔 Попробуй ещё раз!", parse_mode="HTML")
+
+    elif action == "plan_3months":
+        plan_text = (
+            "<b>3 месяца — 600⭐️ (~1008₽)</b>\n\n"
+            "Отличный выбор для тех, кто хочет стабильной и длительной поддержки. "
+            "Я помогу не сбиться с курса, поддержу в трудные моменты и подскажу пути для достижения новых высот! 😊✨"
+        )
+        reply_markup = InlineKeyboardMarkup(inline_keyboard=[
+            [InlineKeyboardButton(text="Подписаться на 3 месяца", pay=True)],
+            [InlineKeyboardButton(text="Назад", callback_data="back_to_plans")]
+        ])
+        try:
+            sent_message = await bot.send_invoice(
+                chat_id=callback.message.chat.id,
+                title="Подписка на Эмму — 3 месяца",
+                description=plan_text,
+                payload="emma_premium_3months",
+                provider_token="",
+                currency="XTR",
+                prices=[{"label": "Подписка на 3 месяца", "amount": 600}],
+                reply_markup=reply_markup
+            )
+            user_data[user_id]['last_pay_message_id'] = sent_message.message_id
+            logging.info(f"Отправлен инвойс для 3 месяцев, message_id: {sent_message.message_id}")
+        except Exception as e:
+            logging.error(f"Ошибка отправки инвойса для 3 месяцев: {e}")
+            await callback.message.answer("Что-то пошло не так при открытии оплаты. 😔 Попробуй ещё раз!", parse_mode="HTML")
+
+    elif action == "plan_12months":
+        plan_text = (
+            "<b>12 месяцев — 2000⭐️ (~3298₽)</b>\n\n"
+            "Этот тариф для тех, кто готов ко всесторонней работе и планирует двигаться к мечтам длительное время. "
+            "Год моей поддержки и мотивации — вместе мы достигнем всего, что задумано! 😊✨"
+        )
+        reply_markup = InlineKeyboardMarkup(inline_keyboard=[
+            [InlineKeyboardButton(text="Подписаться на 12 месяцев", pay=True)],
+            [InlineKeyboardButton(text="Назад", callback_data="back_to_plans")]
+        ])
+        try:
+            sent_message = await bot.send_invoice(
+                chat_id=callback.message.chat.id,
+                title="Подписка на Эмму — 12 месяцев",
+                description=plan_text,
+                payload="emma_premium_12months",
+                provider_token="",
+                currency="XTR",
+                prices=[{"label": "Подписка на 12 месяцев", "amount": 2000}],
+                reply_markup=reply_markup
+            )
+            user_data[user_id]['last_pay_message_id'] = sent_message.message_id
+            logging.info(f"Отправлен инвойс для 12 месяцев, message_id: {sent_message.message_id}")
+        except Exception as e:
+            logging.error(f"Ошибка отправки инвойса для 12 месяцев: {e}")
+            await callback.message.answer("Что-то пошло не так при открытии оплаты. 😔 Попробуй ещё раз!", parse_mode="HTML")
+
+    elif action == "back_to_plans":
+        plans_text = (
+            "<b>Я предлагаю несколько тарифных планов, чтобы ты мог выбрать тот, который подходит именно тебе!</b> 😊\n\n"
+            "По каждому тарифу ты получишь <b>50 запросов в сутки</b> для общения со мной! 💬\n\n"
+            "⦁ <b>1 месяц — 250⭐️ (~429₽)</b>\n"
+            "  Этот тариф — отличный способ начать. Ты получаешь всё необходимое для продуктивного старта. Это самый популярный вариант — Хит!\n\n"
+            "⦁ <b>3 месяца — 600⭐️ (~1008₽)</b>\n"
+            "  Выгодный тариф, который позволит тебе экономить и получать ещё больше пользы. Всего 336₽ в месяц при полном доступе к моим возможностям.\n\n"
+            "⦁ <b>12 месяцев — 2000⭐️ (~3298₽)</b>\n"
+            "  Для тех, кто действительно хочет погрузиться в процесс и получить максимальный эффект. Ты получаешь полный доступ по лучшей цене — всего 274₽ в месяц.\n\n"
+            "<i>Выбери свой план, и я буду рядом, помогая идти к мечтам шаг за шагом!</i> ✨"
+        )
+        reply_markup = InlineKeyboardMarkup(inline_keyboard=[
+            [InlineKeyboardButton(text="🎀1 Месяц🎀", callback_data="plan_1month")],
+            [InlineKeyboardButton(text="🎀3 месяца🎀", callback_data="plan_3months")],
+            [InlineKeyboardButton(text="🎀12 месяцев🎀", callback_data="plan_12months")]
+        ])
+        sent_message = None
+        if PAY_IMAGE_PATH.startswith("http"):
+            try:
+                sent_message = await bot.send_photo(
+                    chat_id=callback.message.chat.id,
+                    photo=PAY_IMAGE_PATH,
+                    caption=plans_text,
+                    parse_mode="HTML",
+                    reply_markup=reply_markup
+                )
+                logging.info(f"Отправлено сообщение с тарифами (назад), message_id: {sent_message.message_id}")
+            except Exception as e:
+                logging.error(f"Ошибка отправки фото для тарифов (назад): {e}")
+        else:
+            if os.path.exists(PAY_IMAGE_PATH):
+                try:
+                    photo = types.FSInputFile(PAY_IMAGE_PATH)
+                    sent_message = await bot.send_photo(
+                        chat_id=callback.message.chat.id,
+                        photo=photo,
+                        caption=plans_text,
+                        parse_mode="HTML",
+                        reply_markup=reply_markup
+                    )
+                    logging.info(f"Отправлено сообщение с тарифами (назад), message_id: {sent_message.message_id}")
+                except Exception as e:
+                    logging.error(f"Ошибка отправки фото для тарифов (назад): {e}")
+        if sent_message is None:
+            sent_message = await callback.message.answer(plans_text, reply_markup=reply_markup, parse_mode="HTML")
+            logging.info(f"Отправлено текстовое сообщение с тарифами (назад), message_id: {sent_message.message_id}")
+        user_data[user_id]['last_pay_message_id'] = sent_message.message_id
+
+    if db:
+        try:
+            db.collection('users').document(str(user_id)).set(user_data[user_id], merge=True)
+            logging.info(f"Сохранены user_data для {user_id} в Firestore")
+        except Exception as e:
+            logging.error(f"Ошибка сохранения user_data: {e}")
+    await callback.answer()
+
 @dp.callback_query(lambda callback: callback.data == "cancel_feedback")
 async def cancel_feedback_callback(callback: types.CallbackQuery):
     """Обработчик нажатия кнопки 'Назад' для отмены /feedback."""
@@ -747,52 +965,6 @@ async def cancel_feedback_callback(callback: types.CallbackQuery):
         except Exception as e:
             logging.error(f"Ошибка сохранения user_data: {e}")
 
-@dp.callback_query(lambda callback: callback.data == "start_pay")
-async def start_pay_callback(callback: types.CallbackQuery):
-    """Обработчик callback для оплаты."""
-    user_id = callback.from_user.id
-    logging.info(f"Callback start_pay от пользователя {user_id}")
-    pay_text = (
-        "Спасибо, что используете Эмму! Эта подписка продлевает ваш доступ к боту без ограничений, "
-        "помогает развитию проекта и поддерживает улучшение функционала. Мы ценим вашу поддержку и доверие!"
-    )
-    try:
-        last_pay_message_id = user_data.get(user_id, {}).get('last_pay_message_id')
-        if last_pay_message_id:
-            await bot.delete_message(
-                chat_id=callback.message.chat.id,
-                message_id=last_pay_message_id
-            )
-            logging.info(f"Удалено сообщение {last_pay_message_id} для пользователя {user_id}")
-        
-        await bot.send_invoice(
-            chat_id=callback.message.chat.id,
-            title="Подписка на Эмму",
-            description=pay_text,
-            payload="emma_premium_monthly_001",
-            provider_token="",
-            currency="XTR",
-            prices=[{"label": "Месячная подписка", "amount": 250}],
-            start_parameter="pay",
-            reply_markup=InlineKeyboardMarkup(inline_keyboard=[
-                [InlineKeyboardButton(text="Подписаться на Эмму", pay=True)]
-            ])
-        )
-        await callback.answer()
-    except Exception as e:
-        logging.error(f"Ошибка отправки инвойса или удаления сообщения: {e}")
-        await callback.message.answer(
-            "Что-то пошло не так при открытии оплаты. 😔 Попробуй ещё раз!",
-            parse_mode="HTML"
-        )
-        await callback.answer()
-    if db:
-        try:
-            db.collection('users').document(str(user_id)).set(user_data[user_id], merge=True)
-            logging.info(f"Сохранены user_data для {user_id} в Firestore")
-        except Exception as e:
-            logging.error(f"Ошибка сохранения user_data: {e}")
-
 @dp.pre_checkout_query()
 async def process_pre_checkout_query(pre_checkout_query: types.PreCheckoutQuery):
     """Обработчик pre-checkout query для оплаты."""
@@ -812,26 +984,43 @@ async def process_successful_payment(message: types.Message):
     user_id = message.from_user.id
     payload = message.successful_payment.invoice_payload
     logging.info(f"Успешный платёж от пользователя {user_id}: {payload}")
-    if payload == "emma_premium_monthly_001":
+    
+    if payload == "emma_premium_1month":
+        duration = "1 месяц"
         expiry_date = datetime.now() + timedelta(days=30)
-        user_data[user_id]['premium'] = True
-        user_data[user_id]['expiry'] = expiry_date.timestamp()
-        if db:
-            try:
-                doc_ref = db.collection('users').document(str(user_id))
-                doc_ref.set({
-                    'premium': True,
-                    'expiry': expiry_date,
-                    'timestamp': firestore.SERVER_TIMESTAMP
-                }, merge=True)
-                logging.info(f"Premium-статус сохранён в Firestore для пользователя {user_id}")
-            except Exception as e:
-                logging.error(f"Ошибка сохранения premium-статуса в Firestore: {e}")
-        await message.answer(
-            "Спасибо за поддержку, ты теперь премиум-пользователь! 🎉 "
-            f"Подписка активна до {expiry_date.strftime('%Y-%m-%d')}. Наслаждайся всеми функциями без ограничений! 😊✨",
-            parse_mode="HTML"
-        )
+        amount = 250
+    elif payload == "emma_premium_3months":
+        duration = "3 месяца"
+        expiry_date = datetime.now() + timedelta(days=90)
+        amount = 600
+    elif payload == "emma_premium_12months":
+        duration = "12 месяцев"
+        expiry_date = datetime.now() + timedelta(days=365)
+        amount = 2000
+    else:
+        logging.error(f"Неизвестный payload: {payload}")
+        await message.answer("Ой, что-то пошло не так с оплатой! 😔 Свяжитесь с поддержкой.", parse_mode="HTML")
+        return
+
+    user_data[user_id]['premium'] = True
+    user_data[user_id]['expiry'] = expiry_date.timestamp()
+    if db:
+        try:
+            doc_ref = db.collection('users').document(str(user_id))
+            doc_ref.set({
+                'premium': True,
+                'expiry': expiry_date,
+                'timestamp': firestore.SERVER_TIMESTAMP
+            }, merge=True)
+            logging.info(f"Premium-статус сохранён в Firestore для пользователя {user_id}")
+        except Exception as e:
+            logging.error(f"Ошибка сохранения premium-статуса в Firestore: {e}")
+    await message.answer(
+        f"Спасибо за поддержку, ты теперь премиум-пользователь на {duration}! 🎉 "
+        f"Подписка активна до {expiry_date.strftime('%Y-%m-%d')}. "
+        f"Наслаждайся всеми функциями без ограничений! 😊✨",
+        parse_mode="HTML"
+    )
 
 @dp.message()
 async def handle_message(message: types.Message):
@@ -993,7 +1182,10 @@ async def handle_callback(callback: types.CallbackQuery):
     await callback.message.bot.send_chat_action(chat_id=callback.message.chat.id, action="typing")
     await asyncio.sleep(0.5)
     
-    if action == "cancel_feedback":
+    if action in ["show_plans", "plan_1month", "plan_3months", "plan_12months", "back_to_plans"]:
+        await handle_subscription_callback(callback)
+        return
+    elif action == "cancel_feedback":
         await cancel_feedback_callback(callback)
         return
     
@@ -1059,6 +1251,7 @@ async def lifespan(app: FastAPI):
 app = FastAPI(lifespan=lifespan)
 
 @app.get("/health")
+@app.head("/health")
 async def health_check():
     logging.info("Запрос к /health")
     try:
@@ -1074,23 +1267,34 @@ async def health_check():
         logging.error(f"Ошибка в health check: {e}", exc_info=True)
         return {"status": "error", "bot_ready": False, "error": str(e)}
 
-@app.post("/webhook")
-async def webhook(request: Request):
-    logging.info("Получен запрос к /webhook")
+@app.post("/webhook/{token}")
+async def webhook(token: str, request: Request):
+    logging.debug(f"Получен webhook запрос: token={token}, headers={request.headers}")
+    if token != TELEGRAM_TOKEN:
+        logging.error("Неверный токен в webhook")
+        return {"status": "error", "message": "Invalid token"}
     try:
+        body = await request.body()
+        logging.debug(f"Тело запроса: {body}")
+        if not body:
+            logging.error("Пустое тело запроса")
+            return {"status": "error", "message": "Empty request body"}
         update = await request.json()
-        update_id = update.get('update_id')
+        logging.debug(f"Получен update: {update}")
+        update_id = update.get("update_id")
         if update_id in processed_updates:
-            logging.warning(f"Игнорирую дубликат update_id: {update_id}")
+            logging.info(f"Повторный update_id: {update_id}, пропущен")
             return {"status": "ok"}
         processed_updates.add(update_id)
-        logging.info(f"Обрабатываю update_id: {update_id}, text={update.get('message', {}).get('text', 'no text')[:50]}...")
-        await dp.feed_update(bot, types.Update(**update))
-        logging.info(f"Обработан update_id: {update_id}")
+        await dp.feed_raw_update(bot, update)
+        logging.debug("Update успешно обработан")
         return {"status": "ok"}
+    except json.JSONDecodeError as e:
+        logging.error(f"Ошибка декодирования JSON: {e}")
+        return {"status": "error", "message": f"JSON decode error: {str(e)}"}
     except Exception as e:
-        logging.error(f"Ошибка в webhook: {e}", exc_info=True)
-        return {"status": "error", "error": str(e)}
+        logging.error(f"Ошибка обработки webhook: {e}", exc_info=True)
+        return {"status": "error", "message": str(e)}
 
 if __name__ == '__main__':
     logging.info("Запуск приложения через uvicorn")
