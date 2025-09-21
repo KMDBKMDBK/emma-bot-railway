@@ -1,35 +1,22 @@
 import asyncio
 import logging
 import aiohttp
-from aiogram import types  # Новый импорт
-from openai import AsyncOpenAI
-import os
 import re
-# ... остальной код ...
+from aiogram import types
+from openai import AsyncOpenAI
+from api_key_manager import OPENROUTER_API_KEY, MODEL_NAME, GOOGLE_API_KEY, GOOGLE_CSE_ID, NUM_SEARCH_RESULTS
 
-# Переменные окружения
-OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
-MODEL_NAME = os.getenv("MODEL_NAME", "openai/gpt-oss-120b:free")
-GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
-GOOGLE_CSE_ID = os.getenv("GOOGLE_CSE_ID")
-NUM_SEARCH_RESULTS = int(os.getenv("NUM_SEARCH_RESULTS", 7))
-MINIAPP_URL = os.getenv("MINIAPP_URL")
-MINIAPP_BUTTON_TEXT = os.getenv("MINIAPP_BUTTON_TEXT", "🎀Просмотр🎀")
-
-# Настройка клиента OpenRouter
 client = AsyncOpenAI(
     api_key=OPENROUTER_API_KEY,
     base_url="https://openrouter.ai/api/v1"
 )
 logging.info("OpenRouter API клиент инициализирован")
 
-# Ключевые слова для уточняющих запросов
 clarification_keywords = [
     "подробнее", "расскажи подробнее", "детали", "ещё", "tell me more", "details",
     "а что насчёт", "расскажи ещё", "больше", "углубись", "да, хочу"
 ]
 
-# Ключевые слова для извлечения темы
 topic_keywords = {
     "вселенная": ["вселенная", "космос", "галактика", "тёмная материя", "тёмная энергия", "большой взрыв"],
     "музыка": ["группа", "солист", "песня", "альбом", "концерт"],
@@ -123,10 +110,8 @@ async def check_link_status(session: aiohttp.ClientSession, url: str) -> bool:
         return False
 
 async def get_google_cse_info(query: str, active_topic: str = None):
-    start_time = time.time()
-    logging.info(f"Начало поиска Google CSE: {query}")
-    if any(keyword in query.lower() for keyword in clarification_keywords):
-        query = active_topic if active_topic else query
+    if any(keyword in query.lower() for keyword in clarification_keywords) and active_topic:
+        query = active_topic
     try:
         async with aiohttp.ClientSession() as session:
             params = {
@@ -167,7 +152,6 @@ async def get_google_cse_info(query: str, active_topic: str = None):
                                 "link": result.get("link", "Без ссылки")
                             })
                     logging.info(f"Валидных источников: {len(valid_results)} из {len(results)} для запроса '{query}'")
-                    logging.info(f"Поиск Google CSE завершён, время: {time.time() - start_time:.2f} сек")
                     return valid_results if valid_results else None
                 else:
                     logging.error(f"Google CSE HTTP ошибка: {response.status}")
@@ -177,7 +161,6 @@ async def get_google_cse_info(query: str, active_topic: str = None):
         return None
 
 async def get_unlim_response(user_id: int, user_text: str, history: list, is_code_request=False, search_data=None, use_html=True, max_retries=5):
-    start_time = time.time()
     logging.info(f"Запрос к OpenRouter для user {user_id}: {user_text[:50]}...")
     for attempt in range(max_retries + 1):
         try:
@@ -240,7 +223,6 @@ async def get_unlim_response(user_id: int, user_text: str, history: list, is_cod
             )
             content = response.choices[0].message.content
             logging.info(f"Успешный ответ от OpenRouter: {content[:50]}...")
-            logging.info(f"Запрос к OpenRouter завершён, время: {time.time() - start_time:.2f} сек")
             if "расходятся" in content.lower() or "противоречия" in content.lower():
                 logging.warning(f"Обнаружены противоречия в данных для запроса '{user_text}'")
             return content
@@ -254,8 +236,6 @@ async def get_unlim_response(user_id: int, user_text: str, history: list, is_cod
             return "Извини, что-то пошло не так. 😔 Попробуй ещё раз или спроси что-то другое! 😊"
 
 async def send_long_message(message: types.Message, text: str, parse_mode: str, reply_markup=None):
-    import time
-    start_time = time.time()
     if not text:
         logging.warning("Попытка отправить пустое сообщение, пропущено.")
         return
@@ -264,18 +244,8 @@ async def send_long_message(message: types.Message, text: str, parse_mode: str, 
     cleaned_text = validate_and_fix_html(cleaned_text)
     max_length = 4096 - len(parse_mode) - 50
     message_id = f"{user_id}_{int(time.time() * 1000)}"
-    from database import db
-    if db:
-        try:
-            doc_ref = db.collection('messages').document(message_id)
-            doc_ref.set({
-                'user_id': user_id,
-                'text': cleaned_text,
-                'timestamp': firestore.SERVER_TIMESTAMP
-            })
-            logging.info(f"Сообщение сохранено в Firestore с ID: {message_id}")
-        except Exception as e:
-            logging.error(f"Ошибка сохранения в Firestore: {e}")
+    from database import db, save_message
+    await save_message(message_id, user_id, cleaned_text)
     app_reply_markup = None
     if MINIAPP_URL:
         web_app_url = f"{MINIAPP_URL}?message_id={message_id}&user_id={user_id}"
@@ -293,17 +263,15 @@ async def send_long_message(message: types.Message, text: str, parse_mode: str, 
         for i, part in enumerate(parts):
             part_reply_markup = effective_reply_markup if i == 0 else None
             await message.answer(part, reply_markup=part_reply_markup, parse_mode=parse_mode, disable_web_page_preview=True)
-    logging.info(f"Отправка длинного сообщения завершена, время: {time.time() - start_time:.2f} сек")
 
 async def set_bot_commands():
-    """Устанавливает меню команд бота."""
     commands = [
-        types.BotCommand(command="/start", description="😇 Начать общение с Эммой"),
-        types.BotCommand(command="/info", description="👩🏻‍🦰 Узнать подробнее обо мне"),
-        types.BotCommand(command="/pay", description="💝 Моя подписка"),
-        types.BotCommand(command="/clear", description="🧹 Очистить историю диалога"),
-        types.BotCommand(command="/feedback", description="📩 Оставить обратную связь"),
-        types.BotCommand(command="/cancel", description="🚫 Отменить текущую операцию")
+        BotCommand(command="/start", description="😇 Начать общение с Эммой"),
+        BotCommand(command="/info", description="👩🏻‍🦰 Узнать подробнее обо мне"),
+        BotCommand(command="/pay", description="💝 Моя подписка"),
+        BotCommand(command="/clear", description="🧹 Очистить историю диалога"),
+        BotCommand(command="/feedback", description="📩 Оставить обратную связь"),
+        BotCommand(command="/cancel", description="🚫 Отменить текущую операцию")
     ]
     await bot.set_my_commands(commands)
     logging.info("Меню команд установлено")

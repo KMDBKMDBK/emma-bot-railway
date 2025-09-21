@@ -1,59 +1,17 @@
+from fastapi import FastAPI, Request
+import uvicorn
 import os
 import logging
-import json
-import base64
-from fastapi import FastAPI, Request
 from aiogram import Bot, Dispatcher
+from aiogram.types import Update
+from handlers import dp, bot
+from data import user_data, processed_updates
+from database import db, save_user_data
 from contextlib import asynccontextmanager
-from dotenv import load_dotenv
-import firebase_admin
-from firebase_admin import credentials, firestore
-from handlers import dp, bot, user_data, processed_updates
-from utils import set_bot_commands
-from database import db, load_user_data
 
-# Настройка логов
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
-# Загрузка переменных окружения
-load_dotenv()
-logging.info("Переменные окружения загружены")
-
-# Инициализация Firebase
-firebase_credentials = os.getenv("FIREBASE_CREDENTIALS_JSON")
-if firebase_credentials:
-    try:
-        cred_json = base64.b64decode(firebase_credentials).decode()
-        cred = credentials.Certificate(json.loads(cred_json))
-        firebase_admin.initialize_app(cred)
-        db = firestore.client()
-        logging.info("Firebase инициализирован успешно (base64)")
-    except Exception as e:
-        db = None
-        logging.warning(f"Firebase не инициализирован из base64: {e}")
-else:
-    cred_path = os.getenv("FIREBASE_CREDENTIALS_PATH")
-    if cred_path and os.path.exists(cred_path):
-        cred = credentials.Certificate(cred_path)
-        firebase_admin.initialize_app(cred)
-        db = firestore.client()
-        logging.info("Firebase инициализирован успешно (локальный путь)")
-    else:
-        db = None
-        logging.warning("Firebase не инициализирован (проверь FIREBASE_CREDENTIALS_PATH или FIREBASE_CREDENTIALS_JSON)")
-
-# Инициализация бота
-TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN")
-if not TELEGRAM_TOKEN:
-    logging.error("TELEGRAM_TOKEN не указан в .env")
-    exit(1)
-bot = Bot(token=TELEGRAM_TOKEN)
-dp = Dispatcher()
-user_data = {}
-processed_updates = set()
-
-# FastAPI приложение
-app = FastAPI(lifespan=lifespan)
+app = FastAPI()
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -65,9 +23,21 @@ async def lifespan(app: FastAPI):
         await bot.set_webhook(webhook_url)
         info = await bot.get_webhook_info()
         logging.info(f"Webhook установлен: url={info.url}, pending_updates={info.pending_update_count}")
+        from utils import set_bot_commands
         await set_bot_commands()
         if db:
-            await load_user_data()
+            try:
+                docs = db.collection('users').stream()
+                for doc in docs:
+                    try:
+                        user_id_int = int(doc.id)
+                        user_data[user_id_int] = doc.to_dict()
+                        logging.info(f"Загружены данные пользователя {user_id_int} из Firestore")
+                    except ValueError:
+                        logging.warning(f"Пропуск невалидного user_id: {doc.id} (не число)")
+                logging.info("Все user_data загружены из Firestore")
+            except Exception as e:
+                logging.error(f"Ошибка загрузки user_data из Firestore: {e}")
     except Exception as e:
         logging.error(f"Ошибка в lifespan (startup): {e}", exc_info=True)
     yield
@@ -76,6 +46,8 @@ async def lifespan(app: FastAPI):
         logging.info("Webhook удалён при завершении работы")
     except Exception as e:
         logging.error(f"Ошибка в lifespan (shutdown): {e}", exc_info=True)
+
+app = FastAPI(lifespan=lifespan)
 
 @app.get("/health")
 @app.head("/health")
@@ -122,5 +94,4 @@ async def webhook(request: Request):
 
 if __name__ == '__main__':
     logging.info("Запуск приложения через uvicorn")
-    import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=int(os.getenv("PORT", 8000)), workers=1)
