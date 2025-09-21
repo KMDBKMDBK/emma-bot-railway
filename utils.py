@@ -1,10 +1,11 @@
-import aiohttp
-from openai import AsyncOpenAI
-import re
+import asyncio
 import logging
+import aiohttp
+from aiogram import types  # Новый импорт
+from openai import AsyncOpenAI
 import os
-import time
-from firebase_admin import firestore
+import re
+# ... остальной код ...
 
 # Переменные окружения
 OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
