@@ -2,9 +2,10 @@ from fastapi import FastAPI, Request
 import uvicorn
 import os
 import logging
+import json  # Добавлен импорт json
 from aiogram import Bot, Dispatcher
 from aiogram.types import Update
-from handlers import dp, bot
+from handlers import dp as router, bot  # Импортируем router как dp из handlers
 from data import user_data, processed_updates
 from database import db, save_user_data
 from contextlib import asynccontextmanager
@@ -12,6 +13,10 @@ from contextlib import asynccontextmanager
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 app = FastAPI()
+
+# Создаем Dispatcher и включаем в него Router из handlers
+dp = Dispatcher()
+dp.include_router(router)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -82,7 +87,7 @@ async def webhook(request: Request):
             logging.info(f"Повторный update_id: {update_id}, пропущен")
             return {"status": "ok"}
         processed_updates.add(update_id)
-        await dp.feed_raw_update(bot, update)
+        await dp.feed_raw_update(bot, update)  # Используем Dispatcher (dp), а не Router
         logging.debug("Update успешно обработан")
         return {"status": "ok"}
     except json.JSONDecodeError as e:
@@ -94,4 +99,4 @@ async def webhook(request: Request):
 
 if __name__ == '__main__':
     logging.info("Запуск приложения через uvicorn")
-    uvicorn.run(app, host="0.0.0.0", port=int(os.getenv("PORT", 8000)), workers=1)
+    uvicorn.run(app, host="0.0.0.0", port=int(os.getenv("PORT", 10000)), workers=1)
