@@ -1,74 +1,62 @@
+import logging
 import firebase_admin
 from firebase_admin import credentials, firestore
-from api_key_manager import FIREBASE_CREDENTIALS_JSON
+import os
 import base64
 import json
-import logging
+from handlers import user_data
 
-# Инициализация Firebase
-try:
-    cred_dict = json.loads(base64.b64decode(FIREBASE_CREDENTIALS_JSON).decode('utf-8'))
-    cred = credentials.Certificate(cred_dict)
-    firebase_admin.initialize_app(cred)
-    db = firestore.AsyncClient()
-    logging.info("Firebase успешно инициализирован")
-except Exception as e:
-    logging.error(f"Ошибка инициализации Firebase: {e}")
-    raise
+logger = logging.getLogger(__name__)
 
-async def save_user_data(user_id: int, data: dict, premium_data: dict = None):
+def init_firebase():
+    firebase_credentials = os.getenv("FIREBASE_CREDENTIALS_JSON")
+    if firebase_credentials:
+        try:
+            cred_json = base64.b64decode(firebase_credentials).decode()
+            cred = credentials.Certificate(json.loads(cred_json))
+            firebase_admin.initialize_app(cred)
+            logger.info("Firebase инициализирован успешно (base64)")
+        except Exception as e:
+            logger.warning(f"Firebase не инициализирован из base64: {e}")
+    else:
+        cred_path = os.getenv("FIREBASE_CREDENTIALS_PATH")
+        if cred_path and os.path.exists(cred_path):
+            cred = credentials.Certificate(cred_path)
+            firebase_admin.initialize_app(cred)
+            logger.info("Firebase инициализирован успешно (локальный путь)")
+        else:
+            logger.warning("Firebase не инициализирован (проверь FIREBASE_CREDENTIALS_PATH или FIREBASE_CREDENTIALS_JSON)")
     try:
-        user_id_str = str(user_id)
-        if not user_id_str.isdigit():
-            logging.debug(f"Пропуск нечислового user_id: {user_id_str}")
-            return
-        doc_ref = db.collection("users").document(user_id_str)
-        await doc_ref.set(data, merge=True)
-        if premium_data:
-            await doc_ref.set(premium_data, merge=True)
-        logging.info(f"Данные сохранены для user_id: {user_id_str}")
+        db = firestore.client()
+        docs = db.collection("users").stream()
+        for doc in docs:
+            try:
+                user_id_int = int(doc.id)
+                user_data[user_id_int] = doc.to_dict()
+                logger.info(f"Загружены данные пользователя {user_id_int} из Firestore")
+            except ValueError:
+                logger.warning(f"Пропуск невалидного user_id: {doc.id} (не число)")
+        logger.info("Все user_data загружены из Firestore")
     except Exception as e:
-        logging.error(f"Ошибка сохранения данных для user_id {user_id}: {e}")
+        logger.error(f"Ошибка загрузки user_data из Firestore: {e}")
 
-async def get_user_data(user_id: int) -> dict:
+async def save_user_data(user_id: int, data: dict):
     try:
-        user_id_str = str(user_id)
-        if not user_id_str.isdigit():
-            logging.debug(f"Пропуск нечислового user_id: {user_id_str}")
-            return {}
-        doc_ref = db.collection("users").document(user_id_str)
-        doc = await doc_ref.get()
-        return doc.to_dict() or {}
+        db = firestore.client()
+        db.collection("users").document(str(user_id)).set(data, merge=True)
+        logger.info(f"Сохранены user_data для {user_id} в Firestore")
     except Exception as e:
-        logging.error(f"Ошибка получения данных для user_id {user_id}: {e}")
-        return {}
+        logger.error(f"Ошибка сохранения user_data: {e}")
 
-async def save_message(message_id: str, user_id: str, text: str):
+async def save_message_to_firestore(user_id: str, text: str, message_id: str):
     try:
-        if not user_id.isdigit():
-            logging.debug(f"Пропуск нечислового user_id: {user_id}")
-            return
+        db = firestore.client()
         doc_ref = db.collection("messages").document(message_id)
-        await doc_ref.set({
+        doc_ref.set({
             "user_id": user_id,
             "text": text,
-            "timestamp": firestore.SERVER_TIMESTAMP
+            "timestamp": firestore.SERVER_TIMESTAMP,
         })
-        logging.info(f"Сообщение сохранено: {message_id}")
+        logger.info(f"Сообщение сохранено в Firestore с ID: {message_id}")
     except Exception as e:
-        logging.error(f"Ошибка сохранения сообщения {message_id}: {e}")
-
-async def get_user_history(user_id: int) -> list:
-    try:
-        user_id_str = str(user_id)
-        if not user_id_str.isdigit():
-            logging.debug(f"Пропуск нечислового user_id: {user_id_str}")
-            return []
-        query = db.collection("messages").where("user_id", "==", user_id_str).order_by("timestamp").limit(20)
-        docs = await query.get()
-        history = [{"role": "user", "content": doc.to_dict().get("text", "")} for doc in docs]
-        logging.info(f"История загружена для user_id: {user_id_str}, {len(history)} сообщений")
-        return history
-    except Exception as e:
-        logging.error(f"Ошибка получения истории для user_id {user_id}: {e}")
-        return []
+        logger.error(f"Ошибка сохранения в Firestore: {e}")
