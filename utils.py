@@ -2,15 +2,20 @@ import asyncio
 import logging
 import aiohttp
 import re
-from aiogram import types
+import time  # Добавлен импорт time
+from aiogram import types, Bot  # Добавлен импорт Bot
 from openai import AsyncOpenAI
-from api_key_manager import OPENROUTER_API_KEY, MODEL_NAME, GOOGLE_API_KEY, GOOGLE_CSE_ID, NUM_SEARCH_RESULTS
+from api_key_manager import OPENROUTER_API_KEY, MODEL_NAME, GOOGLE_API_KEY, GOOGLE_CSE_ID, NUM_SEARCH_RESULTS, TELEGRAM_TOKEN
 
+# Инициализация клиента OpenRouter
 client = AsyncOpenAI(
     api_key=OPENROUTER_API_KEY,
     base_url="https://openrouter.ai/api/v1"
 )
 logging.info("OpenRouter API клиент инициализирован")
+
+# Инициализация бота
+bot = Bot(token=TELEGRAM_TOKEN)
 
 clarification_keywords = [
     "подробнее", "расскажи подробнее", "детали", "ещё", "tell me more", "details",
@@ -266,12 +271,15 @@ async def send_long_message(message: types.Message, text: str, parse_mode: str, 
 
 async def set_bot_commands():
     commands = [
-        BotCommand(command="/start", description="😇 Начать общение с Эммой"),
-        BotCommand(command="/info", description="👩🏻‍🦰 Узнать подробнее обо мне"),
-        BotCommand(command="/pay", description="💝 Моя подписка"),
-        BotCommand(command="/clear", description="🧹 Очистить историю диалога"),
-        BotCommand(command="/feedback", description="📩 Оставить обратную связь"),
-        BotCommand(command="/cancel", description="🚫 Отменить текущую операцию")
+        types.BotCommand(command="/start", description="😇 Начать общение с Эммой"),
+        types.BotCommand(command="/info", description="👩🏻‍🦰 Узнать подробнее обо мне"),
+        types.BotCommand(command="/pay", description="💝 Моя подписка"),
+        types.BotCommand(command="/clear", description="🧹 Очистить историю диалога"),
+        types.BotCommand(command="/feedback", description="📩 Оставить обратную связь"),
+        types.BotCommand(command="/cancel", description="🚫 Отменить текущую операцию")
     ]
-    await bot.set_my_commands(commands)
-    logging.info("Меню команд установлено")
+    try:
+        await bot.set_my_commands(commands)
+        logging.info("Команды бота успешно установлены")
+    except Exception as e:
+        logging.error(f"Ошибка при установке команд бота: {e}")

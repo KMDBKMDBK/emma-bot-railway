@@ -1,15 +1,17 @@
 import logging
 import re
-import os  # Добавлен импорт os
+import os
+import asyncio  # Добавлен импорт asyncio
 from aiogram import Router, Bot, types
 from aiogram.filters import Command
-from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton, BotCommand
-from utils import send_long_message, get_unlim_response, set_bot_commands
+from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
+from utils import send_long_message, get_unlim_response, set_bot_commands, get_google_cse_info, is_relevant, extract_topic
 from database import db, save_user_data
 from data import user_data, processed_updates
 from api_key_manager import (
     TELEGRAM_TOKEN, FEEDBACK_CHAT_ID, PAY_IMAGE_PATH, MINIAPP_URL, MINIAPP_BUTTON_TEXT, START_IMAGE_PATH
 )
+from datetime import datetime, timedelta  # Импортируем для process_successful_payment
 
 dp = Router()
 bot = Bot(token=TELEGRAM_TOKEN)
@@ -579,7 +581,6 @@ async def process_successful_payment(message: types.Message):
     payload = message.successful_payment.invoice_payload
     logging.info(f"Успешный платёж от пользователя {user_id}: {payload}")
     
-    from datetime import datetime, timedelta
     if payload == "emma_premium_1month":
         duration = "1 месяц"
         expiry_date = datetime.now() + timedelta(days=30)
