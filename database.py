@@ -4,7 +4,7 @@ from firebase_admin import credentials, firestore
 import os
 import base64
 import json
-from handlers import user_data
+from state import user_data
 
 logger = logging.getLogger(__name__)
 

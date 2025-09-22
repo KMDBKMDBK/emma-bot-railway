@@ -6,6 +6,7 @@ from openai import AsyncOpenAI
 from bs4 import BeautifulSoup
 import os
 from database import save_user_data, save_message_to_firestore
+from state import user_data
 
 logger = logging.getLogger(__name__)
 

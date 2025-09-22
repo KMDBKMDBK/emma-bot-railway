@@ -4,8 +4,11 @@ from aiogram.filters import Command, CommandStart
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton, FSInputFile, BotCommand
 from datetime import datetime, timedelta
 import os
+import re
+import asyncio
 from utils import validate_and_fix_html, get_unlim_response, get_google_cse_info, extract_topic, is_relevant
-from database import get_user_data, save_user_data, save_message_to_firestore
+from database import save_user_data
+from state import user_data
 
 logger = logging.getLogger(__name__)
 
@@ -753,5 +756,3 @@ def register_handlers(dp: Dispatcher):
     dp.callback_query.register(handle_callback)
     dp.pre_checkout_query.register(process_pre_checkout_query)
     dp.message.register(process_successful_payment, lambda message: message.successful_payment is not None)
-
-user_data = {}
