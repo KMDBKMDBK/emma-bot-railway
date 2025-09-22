@@ -1,5 +1,6 @@
 import logging
 import re
+import os  # Добавлен импорт os
 from aiogram import Router, Bot, types
 from aiogram.filters import Command
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton, BotCommand
