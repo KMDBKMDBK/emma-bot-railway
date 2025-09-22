@@ -1,7 +1,7 @@
 import logging
 import asyncio
 import re
-from aiogram import Router, types, F
+from aiogram import Router, types, F, Bot
 from aiogram.filters import Command, StateFilter
 from aiogram.fsm.context import FSMContext
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton, FSInputFile, BotCommand, WebAppInfo
@@ -22,7 +22,7 @@ MINIAPP_BUTTON_TEXT = os.getenv("MINIAPP_BUTTON_TEXT", "🎀Просмотр🎀
 PAY_IMAGE_PATH = os.getenv("PAY_IMAGE_PATH", "./images/pay_image.jpg")
 START_IMAGE_PATH = os.getenv("START_IMAGE_PATH", "./images/start_image.jpg")
 
-async def set_bot_commands(bot: types.Bot):
+async def set_bot_commands(bot: Bot):
     commands = [
         BotCommand(command="/start", description="😇 Начать общение с Эммой"),
         BotCommand(command="/info", description="👩🏻‍🦰 Узнать подробнее обо мне"),
@@ -125,7 +125,7 @@ async def info_command(message: types.Message):
     await save_user_data(user_id, user_data[user_id])
 
 @router.message(Command("clear"))
-async def clear_command(message: types.Message):
+async def clear_command(message: types.Message, state: FSMContext):
     user_id = message.from_user.id
     logger.info(f"Команда /clear от пользователя {user_id}")
     user_data[user_id] = {
@@ -138,6 +138,7 @@ async def clear_command(message: types.Message):
         "feedback_message_id": None,
         "user_feedback_message_id": None,
     }
+    await state.set_state(UserState.waiting_for_message)
     await message.answer("История очищена! 😊 Начинаем с чистого листа.", parse_mode="HTML")
     await save_user_data(user_id, user_data[user_id])
 
@@ -315,7 +316,6 @@ async def reply_command(message: types.Message):
             parse_mode="HTML",
         )
 
-@router.callback_query(lambda c: c.data in ["show_plans", "plan_1month", "plan_3months", "plan_12months", "back_to_plans"])
 async def handle_subscription_callback(callback: types.CallbackQuery):
     user_id = callback.from_user.id
     action = callback.data
@@ -390,7 +390,7 @@ async def handle_subscription_callback(callback: types.CallbackQuery):
         user_data[user_id]["last_pay_message_id"] = sent_message.message_id
     elif action == "plan_1month":
         plan_text = (
-            "1 месяц — 250⭐️ (~429₽)"
+            "1 месяц — 250⭐️ (~429₽)\n"
             "Это идеальный старт для тех, кто хочет почувствовать мою поддержку и мотивацию. "
             "Я буду с тобой каждый день, помогая делать первые шаги к твоим целям и поддерживая вдохновение! 😊✨"
         )
@@ -416,7 +416,7 @@ async def handle_subscription_callback(callback: types.CallbackQuery):
             await callback.message.answer("Что-то пошло не так при открытии оплаты. 😔 Попробуй ещё раз!", parse_mode="HTML")
     elif action == "plan_3months":
         plan_text = (
-            "3 месяца — 600⭐️ (~1008₽)"
+            "3 месяца — 600⭐️ (~1008₽)\n"
             "Отличный выбор для тех, кто хочет стабильной и длительной поддержки. "
             "Я помогу не сбиться с курса, поддержу в трудные моменты и подскажу пути для достижения новых высот! 😊✨"
         )
@@ -442,7 +442,7 @@ async def handle_subscription_callback(callback: types.CallbackQuery):
             await callback.message.answer("Что-то пошло не так при открытии оплаты. 😔 Попробуй ещё раз!", parse_mode="HTML")
     elif action == "plan_12months":
         plan_text = (
-            "12 месяцев — 2000⭐️ (~3298₽)"
+            "12 месяцев — 2000⭐️ (~3298₽)\n"
             "Этот тариф для тех, кто готов ко всесторонней работе и планирует двигаться к мечтам длительное время. "
             "Год моей поддержки и мотивации — вместе мы достигнем всего, что задумано! 😊✨"
         )
@@ -517,8 +517,8 @@ async def handle_subscription_callback(callback: types.CallbackQuery):
     await save_user_data(user_id, user_data[user_id])
     await callback.answer()
 
-@router.callback_query(lambda c: c.data == "cancel_feedback")
-async def cancel_feedback_callback(callback: types.CallbackQuery):
+@router.callback_query(F.data == "cancel_feedback")
+async def cancel_feedback_callback(callback: types.CallbackQuery, state: FSMContext):
     user_id = callback.from_user.id
     logger.info(f"Нажата кнопка 'Назад' для /feedback от пользователя {user_id}")
     user_data[user_id] = user_data.get(user_id, {
@@ -531,10 +531,11 @@ async def cancel_feedback_callback(callback: types.CallbackQuery):
         "feedback_message_id": None,
         "user_feedback_message_id": None,
     })
-    await callback.message.bot.delete_message(
-        chat_id=callback.message.chat.id,
-        message_id=callback.message.message_id
-    )
+    await state.set_state(UserState.waiting_for_message)
+    try:
+        await callback.message.delete()
+    except Exception as e:
+        logger.error(f"Ошибка при удалении сообщения /feedback: {e}")
     await callback.message.answer(
         "Режим обратной связи отменён! 😊 Можешь продолжить общение с Эммой.",
         parse_mode="HTML"
@@ -552,7 +553,7 @@ async def process_pre_checkout_query(pre_checkout_query: types.PreCheckoutQuery)
     await pre_checkout_query.bot.answer_pre_checkout_query(pre_checkout_query.id, ok=True)
     await save_user_data(user_id, user_data[user_id])
 
-@router.message(lambda message: message.successful_payment is not None)
+@router.message(F.successful_payment)
 async def process_successful_payment(message: types.Message):
     user_id = message.from_user.id
     payload = message.successful_payment.invoice_payload
@@ -662,10 +663,6 @@ async def handle_message(message: types.Message, state: FSMContext):
         "feedback_message_id": None,
         "user_feedback_message_id": None,
     })
-    if user_data[user_id].get("awaiting_feedback", False):
-        # Обработка обратной связи (если она ещё активна)
-        await process_feedback(message, state)
-        return
     history = user_data[user_id]["history"]
     active_topic = user_data[user_id]["active_topic"]
     clarification_keywords = [
@@ -707,7 +704,7 @@ async def handle_message(message: types.Message, state: FSMContext):
     await save_user_data(user_id, user_data[user_id])
 
 @router.callback_query()
-async def handle_callback(callback: types.CallbackQuery):
+async def handle_callback(callback: types.CallbackQuery, state: FSMContext):
     user_id = callback.from_user.id
     action = callback.data
     logger.info(f"Пользователь {user_id}: Нажата кнопка: {action}")
@@ -727,7 +724,7 @@ async def handle_callback(callback: types.CallbackQuery):
         await handle_subscription_callback(callback)
         return
     elif action == "cancel_feedback":
-        await cancel_feedback_callback(callback)
+        await cancel_feedback_callback(callback, state)
         return
     history = user_data[user_id]["history"]
     active_topic = user_data[user_id]["active_topic"]
