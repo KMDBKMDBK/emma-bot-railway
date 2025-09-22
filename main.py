@@ -1,4 +1,5 @@
 import logging
+import json  # Добавлен импорт json
 from fastapi import FastAPI, Request
 import uvicorn
 from aiogram import Bot, Dispatcher

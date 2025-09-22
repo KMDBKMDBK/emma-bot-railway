@@ -6,7 +6,7 @@ from datetime import datetime, timedelta
 import os
 import re
 import asyncio
-from utils import validate_and_fix_html, get_unlim_response, get_google_cse_info, extract_topic, is_relevant
+from utils import validate_and_fix_html, get_unlim_response, get_google_cse_info, extract_topic, is_relevant, send_long_message  # Добавлен импорт send_long_message
 from database import save_user_data
 from state import user_data
 
