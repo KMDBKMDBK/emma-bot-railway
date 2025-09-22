@@ -1,102 +1,49 @@
-from fastapi import FastAPI, Request
-import uvicorn
-import os
 import logging
-import json  # Добавлен импорт json
+from fastapi import FastAPI, Request, HTTPException
 from aiogram import Bot, Dispatcher
 from aiogram.types import Update
-from handlers import dp as router, bot  # Импортируем router как dp из handlers
-from data import user_data, processed_updates
-from database import db, save_user_data
-from contextlib import asynccontextmanager
+from api_key_manager import TELEGRAM_TOKEN, RENDER_URL
+from utils import set_bot_commands
 
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+logging.basicConfig(level=logging.INFO)
 
 app = FastAPI()
-
-# Создаем Dispatcher и включаем в него Router из handlers
+bot = Bot(token=TELEGRAM_TOKEN)
 dp = Dispatcher()
-dp.include_router(router)
 
-@asynccontextmanager
-async def lifespan(app: FastAPI):
-    logging.info("Запуск lifespan: настройка webhook и загрузка данных")
+@app.on_event("startup")
+async def on_startup():
+    webhook_url = f"{RENDER_URL}/webhook"
     try:
-        render_url = os.getenv('RENDER_URL', 'emma-bot-render.onrender.com')
-        webhook_url = f"https://{render_url}/webhook"
-        logging.info(f"Установка webhook на {webhook_url}")
         await bot.set_webhook(webhook_url)
-        info = await bot.get_webhook_info()
-        logging.info(f"Webhook установлен: url={info.url}, pending_updates={info.pending_update_count}")
-        from utils import set_bot_commands
+        logging.info(f"Webhook установлен: {webhook_url}")
         await set_bot_commands()
-        if db:
-            try:
-                docs = db.collection('users').stream()
-                for doc in docs:
-                    try:
-                        user_id_int = int(doc.id)
-                        user_data[user_id_int] = doc.to_dict()
-                        logging.info(f"Загружены данные пользователя {user_id_int} из Firestore")
-                    except ValueError:
-                        logging.warning(f"Пропуск невалидного user_id: {doc.id} (не число)")
-                logging.info("Все user_data загружены из Firestore")
-            except Exception as e:
-                logging.error(f"Ошибка загрузки user_data из Firestore: {e}")
     except Exception as e:
-        logging.error(f"Ошибка в lifespan (startup): {e}", exc_info=True)
-    yield
-    try:
-        await bot.delete_webhook()
-        logging.info("Webhook удалён при завершении работы")
-    except Exception as e:
-        logging.error(f"Ошибка в lifespan (shutdown): {e}", exc_info=True)
-
-app = FastAPI(lifespan=lifespan)
-
-@app.get("/health")
-@app.head("/health")
-async def health_check():
-    logging.info("Запрос к /health")
-    try:
-        info = await bot.get_webhook_info()
-        logging.info(f"Health check успешен: webhook_url={info.url}, pending_updates={info.pending_update_count}")
-        return {
-            "status": "ok",
-            "bot_ready": True,
-            "webhook_url": info.url,
-            "pending_updates": info.pending_update_count
-        }
-    except Exception as e:
-        logging.error(f"Ошибка в health check: {e}", exc_info=True)
-        return {"status": "error", "bot_ready": False, "error": str(e)}
+        logging.error(f"Ошибка установки webhook: {e}")
 
 @app.post("/webhook")
 async def webhook(request: Request):
-    logging.debug(f"Получен webhook запрос: headers={request.headers}")
     try:
-        body = await request.body()
-        logging.debug(f"Тело запроса: {body}")
-        if not body:
-            logging.error("Пустое тело запроса")
-            return {"status": "error", "message": "Empty request body"}
         update = await request.json()
-        logging.debug(f"Получен update: {update}")
-        update_id = update.get("update_id")
-        if update_id in processed_updates:
-            logging.info(f"Повторный update_id: {update_id}, пропущен")
-            return {"status": "ok"}
-        processed_updates.add(update_id)
-        await dp.feed_raw_update(bot, update)  # Используем Dispatcher (dp), а не Router
-        logging.debug("Update успешно обработан")
+        update = Update(**update)
+        await dp.feed_raw_update(bot, update)
         return {"status": "ok"}
-    except json.JSONDecodeError as e:
-        logging.error(f"Ошибка декодирования JSON: {e}")
-        return {"status": "error", "message": f"JSON decode error: {str(e)}"}
     except Exception as e:
-        logging.error(f"Ошибка обработки webhook: {e}", exc_info=True)
-        return {"status": "error", "message": str(e)}
+        logging.error(f"Ошибка обработки webhook: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
-if __name__ == '__main__':
-    logging.info("Запуск приложения через uvicorn")
-    uvicorn.run(app, host="0.0.0.0", port=int(os.getenv("PORT", 10000)), workers=1)
+@app.get("/health")
+async def health_check():
+    try:
+        bot_info = await bot.get_me()
+        webhook_info = await bot.get_webhook_info()
+        updates = await bot.get_updates(limit=1)
+        return {
+            "status": "ok",
+            "bot_ready": bool(bot_info),
+            "webhook_url": webhook_info.url,
+            "pending_updates": len(updates)
+        }
+    except Exception as e:
+        logging.error(f"Ошибка health check: {e}")
+        raise HTTPException(status_code=500, detail=str(e))

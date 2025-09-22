@@ -2,10 +2,10 @@ import asyncio
 import logging
 import aiohttp
 import re
-import time  # Добавлен импорт time
-from aiogram import types, Bot  # Добавлен импорт Bot
+import time
+from aiogram import types, Bot
 from openai import AsyncOpenAI
-from api_key_manager import OPENROUTER_API_KEY, MODEL_NAME, GOOGLE_API_KEY, GOOGLE_CSE_ID, NUM_SEARCH_RESULTS, TELEGRAM_TOKEN
+from api_key_manager import OPENROUTER_API_KEY, MODEL_NAME, GOOGLE_API_KEY, GOOGLE_CSE_ID, NUM_SEARCH_RESULTS, TELEGRAM_TOKEN, MINIAPP_URL, MINIAPP_BUTTON_TEXT
 
 # Инициализация клиента OpenRouter
 client = AsyncOpenAI(
@@ -252,7 +252,7 @@ async def send_long_message(message: types.Message, text: str, parse_mode: str, 
     from database import db, save_message
     await save_message(message_id, user_id, cleaned_text)
     app_reply_markup = None
-    if MINIAPP_URL:
+    if MINIAPP_URL and MINIAPP_BUTTON_TEXT:
         web_app_url = f"{MINIAPP_URL}?message_id={message_id}&user_id={user_id}"
         if len(web_app_url) <= 200:
             app_reply_markup = types.InlineKeyboardMarkup(inline_keyboard=[
