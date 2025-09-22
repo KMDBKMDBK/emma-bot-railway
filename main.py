@@ -1,12 +1,12 @@
 import logging
-import json  # Добавлен импорт json
+import json
 from fastapi import FastAPI, Request
 import uvicorn
-from aiogram import Bot, Dispatcher
+from aiogram import Bot, Dispatcher, Router
 from contextlib import asynccontextmanager
 import os
 from dotenv import load_dotenv
-from handlers import register_handlers
+from handlers import router  # Импорт роутера из handlers
 from database import init_firebase
 
 # Настройка логирования
@@ -31,8 +31,8 @@ if not TELEGRAM_TOKEN:
 bot = Bot(token=TELEGRAM_TOKEN)
 dp = Dispatcher()
 
-# Регистрация обработчиков и Firebase
-register_handlers(dp)
+# Регистрация роутера и Firebase
+dp.include_router(router)
 init_firebase()
 
 @asynccontextmanager
